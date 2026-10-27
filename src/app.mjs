@@ -8,11 +8,11 @@ const fmt=(x,d=0)=>x==null?'—':Number(x).toLocaleString(undefined,{maximumFrac
 let map,config,sim,running=false,locked=false,previous=0,accumulator=0,lastPaint=0,view3d,selected=null,positions=[];
 function message(text){$('error').hidden=!text;$('error').textContent=text;}
 function options(){
-  const o={scenario:$('scenario').value,mode:$('mode').value,seed:Number($('seed').value),initialAgents:Number($('population').value),arrivalRate:Number($('rate').value)};
+  const o={scenario:$('scenario').value,mode:$('mode').value,seed:Number($('seed').value),initialAgents:Number($('population').value),arrivalRate:Number($('rate').value),lodgePercent:Number($('lodge-percent').value)};
   if(!Number.isInteger(o.seed)||o.seed<0||o.seed>4294967295||!Number.isInteger(o.initialAgents)||o.initialAgents<0||o.initialAgents>10000||o.arrivalRate<0||o.arrivalRate>12)throw new Error('Use a whole-number seed, 0–10,000 opening skiers and 0–12 arrivals/minute.');
   return o;
 }
-function setSettings(){document.querySelectorAll('.setting').forEach(e=>e.disabled=locked);$('rate').disabled=locked||$('mode').value==='fixed';}
+function setSettings(){$('lodge-percent-value').textContent=$('lodge-percent').value+'%';document.querySelectorAll('.setting').forEach(e=>e.disabled=locked);$('rate').disabled=locked||$('mode').value==='fixed';}
 function reset(){try{running=false;locked=false;accumulator=0;selected=null;sim=new Simulation(map,config,options());$('play').textContent='Start simulation';$('play').disabled=false;setSettings();drawMap();render();message('');}catch(e){message(e.message);$('play').disabled=true;}}
 function svg(tag,attrs={},text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);if(text)e.textContent=text;return e;}
 function drawMap(){
@@ -69,6 +69,7 @@ try{
   reset();
   $('play').onclick=()=>{if(sim.done)return;locked=true;running=!running;setSettings();$('play').textContent=running?'Pause':'Resume';};
   $('reset').onclick=reset;document.querySelectorAll('.setting').forEach(e=>e.onchange=()=>{if(!locked)reset();});
+  $('lodge-percent').oninput=()=>{$('lodge-percent-value').textContent=$('lodge-percent').value+'%';};
   $('chart-metric').onchange=chart;window.addEventListener('resize',chart);
   document.querySelectorAll('[data-view]').forEach(button=>{if(button.tagName!=='BUTTON')return;button.onclick=()=>{
     $('map-views').dataset.view=button.dataset.view;

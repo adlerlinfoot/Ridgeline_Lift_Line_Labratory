@@ -98,3 +98,7 @@ Opaque-cone visibility: only front-facing route portions, skiers, queue markers,
 ## Main Lodge spawn
 
 Every opening and later-arrival skier starts at Main Lodge (LODGE), halfway along T04 between Meadow and Aspen bases. T04 is split internally at that explicit junction; its geometry and total length are preserved. All skiers, including dedicated lappers, walk from the lodge to their admissible lift. These minutes count as base transit. Lodge icons appear in both views; in cone mode the lodge respects mountain occlusion. Spawn node is included in skier exports. Departure behavior is unchanged; returning to the lodge is not required.
+
+## Lodge spawn percentage
+
+Set Spawn at Main Lodge from 0–100% before starting (default 100%). It sets each opening/later-arrival skier’s independent probability of spawning at the lodge. The remainder spawn uniformly among their admissible active lift bases. Finite samples fluctuate around intermediate percentages; 0% and 100% are exact. Class shares and lapper assignments are unchanged. Reset unlocks the slider. The run export records lodgePercent and each skier’s spawnNode.

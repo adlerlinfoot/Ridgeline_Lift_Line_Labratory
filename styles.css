@@ -5,3 +5,5 @@
 @media(max-width:1150px){.map-views{grid-template-columns:1fr}.three-wrap{min-height:420px}.flat-pane .map-wrap{flex:none}.view-toolbar>.subtle{font-size:10px}}@media(max-width:600px){.three-wrap,.map-views[data-view="3d"] .three-wrap{min-height:350px}.view-switch button{font-size:10px;padding:7px 8px}}
 
 .three-wrap canvas.gyro-canvas{width:112px;height:120px;left:auto;bottom:auto;right:8px;top:8px;z-index:2;cursor:grab;border-radius:50%;background:transparent;touch-action:none}.three-wrap canvas.gyro-canvas:focus-visible{outline:2px solid #b9edb9;outline-offset:0}.three-wrap canvas.gyro-canvas:active{cursor:grabbing}
+
+.field.lodge-setting{min-width:185px}.lodge-setting output{float:right;color:#b9edb9;font-weight:700}.lodge-setting input[type=range]{padding:0;min-height:25px;accent-color:#b9edb9}.lodge-setting small{font-size:9px;color:#8fa8b4}

@@ -123,3 +123,18 @@ test('lodge splits T04 without adding distance and later arrivals also start the
   advance(s,1200);const a=s.createAgent({class:'vacationer',subtype:'park',runU:0,spawnU:.99});assert.equal(a.node,'LODGE');assert.deepEqual(s.position(a),[lodge.x,lodge.y]);s.commit(a,s.chooseLift(a));
   s.run();assert.ok(s.agents.every(a=>a.spawnNode==='LODGE'));s.assertInvariants();
 });
+test('lodge percentage supports endpoints and seeded mixtures with class-admissible alternatives',()=>{
+  for(const scenario of Object.keys(map.scenarios))for(const lodgePercent of [0,40,100]){
+    const s=new Simulation(map,config,{scenario,lodgePercent,initialAgents:1000});let lodge=0;
+    for(const a of s.agents){if(a.spawnNode==='LODGE')lodge++;else assert.ok(s.mountain.candidates(a).includes(s.mountain.baseLift[a.spawnNode]));}
+    if(lodgePercent===0)assert.equal(lodge,0);else if(lodgePercent===100)assert.equal(lodge,1000);else assert.ok(Math.abs(lodge/1000-.4)<.05);
+    const twin=new Simulation(map,config,{scenario,lodgePercent,initialAgents:1000});assert.deepEqual(s.agents.map(a=>a.spawnNode),twin.agents.map(a=>a.spawnNode));
+  }
+  assert.throws(()=>new Simulation(map,config,{lodgePercent:-1}));assert.throws(()=>new Simulation(map,config,{lodgePercent:101}));
+});
+test('lodge percentage also applies to later Poisson arrivals and is exported',()=>{
+  const s=new Simulation(map,config,{mode:'arrival',lodgePercent:50});s.run();s.assertInvariants();
+  const late=s.agents.filter(a=>a.born>0),lodge=late.filter(a=>a.spawnNode==='LODGE').length;
+  assert.ok(lodge>late.length*.4&&lodge<late.length*.6);assert.equal(s.summary().options.lodgePercent,50);
+  for(const a of late.filter(a=>a.spawnNode!=='LODGE'))assert.ok(s.mountain.candidates({...a,preferred:null}).includes(s.mountain.baseLift[a.spawnNode]));
+});

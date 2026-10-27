@@ -75,8 +75,9 @@ export class Mountain {
 
 export class Simulation {
   constructor(map,config,options={}){
-    this.config=config;this.options={scenario:'baseline_3_lifts',mode:'fixed',seed:config.seed_default,initialAgents:config.population.initial_agents,arrivalRate:config.spawning.arrivals_per_minute,dayMinutes:config.time.operating_day_minutes,...options};
-    for(const k of ['seed','initialAgents','arrivalRate','dayMinutes'])if(!Number.isFinite(this.options[k]))throw new Error(`Invalid ${k}`);
+    this.config=config;this.options={scenario:'baseline_3_lifts',mode:'fixed',seed:config.seed_default,initialAgents:config.population.initial_agents,arrivalRate:config.spawning.arrivals_per_minute,dayMinutes:config.time.operating_day_minutes,lodgePercent:config.spawning.lodge_spawn_percent??100,...options};
+    for(const k of ['seed','initialAgents','arrivalRate','dayMinutes','lodgePercent'])if(!Number.isFinite(this.options[k]))throw new Error(`Invalid ${k}`);
+    if(this.options.lodgePercent<0||this.options.lodgePercent>100)throw new Error('Lodge spawn percentage must be 0–100');
     if(this.options.initialAgents<0||!Number.isInteger(this.options.initialAgents)||this.options.arrivalRate<0||this.options.dayMinutes<=0)throw new Error('Invalid population, rate or day length');
     if(!['fixed','arrival'].includes(this.options.mode))throw new Error('Invalid population mode');
     this.mountain=new Mountain(map,config,this.options.scenario);this.random=seededRandom(this.options.seed);this.events=new Heap();this.agents=[];this.active=new Set();this.t=0;this.closed=false;this.done=false;this.closeTime=this.options.dayMinutes*60;this.samples=[];this.switches=0;this.beliefAbs=0;this.beliefN=0;
@@ -84,7 +85,7 @@ export class Simulation {
     this.flowSwitchTime=this.closeTime*(config.spawning.flow_switch_fraction??0.5);this.departureAttempts=0;this.departureSelections=0;
     // Pre-generate demand and departure-selection draws before endogenous behavior.
     const profiles=[];
-    const profile=time=>({time,class:this.weighted(config.population.main_class_weights),subtype:this.weighted(config.population.lapper_subtype_weights),runU:this.random(),spawnU:this.random()});
+    const profile=time=>({time,class:this.weighted(config.population.main_class_weights),subtype:this.weighted(config.population.lapper_subtype_weights),runU:this.random(),spawnU:this.random(),lodgeU:this.random()});
     for(let i=0;i<this.options.initialAgents;i++)profiles.push(profile(0));
     if(this.options.mode==='arrival'&&this.options.arrivalRate>0){
       let t=0;while(true){t+=-Math.log(1-this.random())*60/this.options.arrivalRate;if(t>=this.flowSwitchTime)break;profiles.push(profile(t));}
@@ -109,7 +110,9 @@ export class Simulation {
       const candidates=[...this.config.population.lapper_other_candidate_runs.always_available,...(this.mountain.scenario.active_lifts.includes('L4')?this.config.population.lapper_other_candidate_runs.if_L4_active:[])];
       a.run=candidates[Math.floor(p.runU*candidates.length)];a.home=this.mountain.runs[a.run].primary_lift;
     }
-    a.node=this.config.spawning.spawn_node??'LODGE';
+    const atLodge=(p.lodgeU??this.random())<this.options.lodgePercent/100;
+    const candidates=this.mountain.candidates(a);
+    a.node=atLodge?(this.config.spawning.spawn_node??'LODGE'):this.mountain.lifts[candidates[Math.floor((p.spawnU??this.random())*candidates.length)]].base;
     if(!this.mountain.nodes[a.node])throw new Error('Spawn node missing from topology');
     a.spawnNode=a.node;
     for(const id of this.mountain.scenario.active_lifts){a.memory[id]=opening?0:this.queueSize(id);a.seen[id]=this.t;}
