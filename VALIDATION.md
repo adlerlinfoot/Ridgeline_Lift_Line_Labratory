@@ -10,3 +10,7 @@ Environment: Windows, Python 3.12, Node.js 24.21.0.
 - `git diff --check`: passed.
 
 No browser surface was available to the session, so rendered desktop/mobile appearance and real browser download behavior have **not** been visually verified. DOM tests are not represented as visual browser tests. The original heightfield is absent; no continuous-elevation validation or 3D reconstruction is claimed. No formal equilibrium stability proof is claimed by these implementation tests.
+
+## Two-phase flow revision
+
+21 automated tests pass after replacing random personal stays with morning arrivals/afternoon departure selections. Added halfway cutoff, no pre-halfway exits, no afternoon arrivals, non-repeated departure selection, safe descent completion, pool exhaustion and incoming class-proportion checks. Prior 300-run batch figures describe the earlier flow version and are not results for this revised flow.

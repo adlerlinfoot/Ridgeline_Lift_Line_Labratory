@@ -89,3 +89,7 @@ For implementation, `BASE_DECISION` is **zero-duration**; it is not an unused-ti
 - No queue abandonment except closing. At closing no further boarding: queued agents exit, riders finish their ride and full descent, other moving agents finish to a safe base.
 - The only intervention is the between-run L4 scenario, never an injected queue shock.
 - Primary research outputs concern queue congestion and variability. Skiing time is a supporting agent diagnostic.
+
+## Latest confirmed flow rule (supersedes personal-stay departure rules above)
+
+Arrival mode: independent Poisson arrivals before halfway (210 minutes of a 420-minute day); no arrivals afterward. Afternoon Poisson events at the same rate select uniformly from active, not-yet-selected skiers. Selected skiers finish committed queue/ride/descent, or exit at the next base if transferring. Do not select the same skier twice; skip selections when none eligible. No random personal-stay departures. Fixed mode unchanged. Class probabilities for incoming skiers remain 25/35/15/25. Mixed preference timing uses 40% of available time from arrival to close. Actual exits lag selections until a safe base.

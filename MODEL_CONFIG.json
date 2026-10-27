@@ -1,5 +1,5 @@
 {
-  "version": "4.2.0",
+  "version": "5.0.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -50,18 +50,14 @@
     "mixed_preference_rule": "Freeze up to two personally experienced lifts with smallest mean realized waits at 40% of planned stay; never supplement."
   },
   "spawning": {
-    "process": "poisson",
+    "process": "two_phase_poisson",
     "arrivals_per_minute": 3.0,
     "arrival_rate_ui_min": 0,
     "arrival_rate_ui_max": 12,
     "arrival_rate_ui_step": 0.25,
     "spawn_location_rule": "Choose among physically admissible active lift bases for the assigned skier class/subtype; seeded random. Do not spawn an agent onto an inaccessible summit. Observe every active queue upon spawning.",
-    "personal_stay_minutes": {
-      "distribution": "uniform",
-      "min": 120,
-      "max": 360
-    },
-    "departure_rule": "In arrival mode leave at a safe base after planned stay. Complete an entered queue, ride and descent; finish a current base-transfer segment before exiting. At closing queued agents exit without boarding."
+    "departure_rule": "Arrival mode: Poisson arrivals in first half; equal-rate Poisson departure selections in second half, uniformly from active skiers not already selected. Selected skiers finish their current committed lap; in base transit exit at next base. No random stay-based exits. Closing overrides queues.",
+    "flow_switch_fraction": 0.5
   },
   "movement": {
     "run_meters_per_second": 8.0,

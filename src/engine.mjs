@@ -77,11 +77,15 @@ export class Simulation {
     if(!['fixed','arrival'].includes(this.options.mode))throw new Error('Invalid population mode');
     this.mountain=new Mountain(map,config,this.options.scenario);this.random=seededRandom(this.options.seed);this.events=new Heap();this.agents=[];this.active=new Set();this.t=0;this.closed=false;this.done=false;this.closeTime=this.options.dayMinutes*60;this.samples=[];this.switches=0;this.beliefAbs=0;this.beliefN=0;
     this.queues=Object.fromEntries(map.lifts.map(l=>[l.id,{ids:[],head:0,joined:0,boarded:0,closingExits:0,area:0,squaredArea:0,changedAt:0,peak:0,waitTotal:0,waitCount:0,maxWait:0,abandonedWait:0}]));
-    // Demand traits are generated before behavior so paired scenarios share exogenous arrivals/classes/stays.
+    this.flowSwitchTime=this.closeTime*(config.spawning.flow_switch_fraction??0.5);this.departureAttempts=0;this.departureSelections=0;
+    // Pre-generate demand and departure-selection draws before endogenous behavior.
     const profiles=[];
-    const profile=time=>({time,class:this.weighted(config.population.main_class_weights),subtype:this.weighted(config.population.lapper_subtype_weights),runU:this.random(),spawnU:this.random(),stay:config.spawning.personal_stay_minutes.min+this.random()*(config.spawning.personal_stay_minutes.max-config.spawning.personal_stay_minutes.min)});
+    const profile=time=>({time,class:this.weighted(config.population.main_class_weights),subtype:this.weighted(config.population.lapper_subtype_weights),runU:this.random(),spawnU:this.random()});
     for(let i=0;i<this.options.initialAgents;i++)profiles.push(profile(0));
-    if(this.options.mode==='arrival'&&this.options.arrivalRate>0){let t=0;while(true){t+=-Math.log(1-this.random())*60/this.options.arrivalRate;if(t>=this.closeTime)break;profiles.push(profile(t));}}
+    if(this.options.mode==='arrival'&&this.options.arrivalRate>0){
+      let t=0;while(true){t+=-Math.log(1-this.random())*60/this.options.arrivalRate;if(t>=this.flowSwitchTime)break;profiles.push(profile(t));}
+      t=this.flowSwitchTime;while(true){t+=-Math.log(1-this.random())*60/this.options.arrivalRate;if(t>=this.closeTime)break;this.events.push(t,2,'departure',this.random());}
+    }
     this.events.push(this.closeTime,0,'close');
     for(const id of this.mountain.scenario.active_lifts){const interval=3600/this.mountain.lifts[id].capacity_skiers_per_hour;this.events.push(interval,3,'board',id);}
     const opening=profiles.filter(p=>p.time===0).map(p=>this.createAgent(p,true));
@@ -95,7 +99,7 @@ export class Simulation {
   weighted(weights){let x=this.random()*Object.values(weights).reduce((a,b)=>a+b,0);for(const [k,w] of Object.entries(weights)){x-=w;if(x<0)return k;}return Object.keys(weights).at(-1);}
   queueSize(id){const q=this.queues[id];return q.ids.length-q.head;}
   createAgent(p,opening=false){
-    const a={id:this.agents.length,class:p.class,subtype:p.class==='lapper'?p.subtype:null,home:null,run:null,preferred:null,waits:{},memory:{},seen:{},born:this.t,plannedStay:this.options.mode==='fixed'?this.closeTime:p.stay*60,node:null,state:'BASE_DECISION',since:this.t,counters:{skiing:0,queue:0,uphill:0,transit:0},visits:{},switches:0,laps:0,lastLift:null,route:[],routeIndex:0};
+    const a={id:this.agents.length,class:p.class,subtype:p.class==='lapper'?p.subtype:null,home:null,run:null,preferred:null,waits:{},memory:{},seen:{},born:this.t,plannedStay:this.closeTime-this.t,departureRequestedAt:null,node:null,state:'BASE_DECISION',since:this.t,counters:{skiing:0,queue:0,uphill:0,transit:0},visits:{},switches:0,laps:0,lastLift:null,route:[],routeIndex:0};
     if(a.subtype==='race')a.home='L1';
     if(a.subtype==='other'){
       const candidates=[...this.config.population.lapper_other_candidate_runs.always_available,...(this.mountain.scenario.active_lifts.includes('L4')?this.config.population.lapper_other_candidate_runs.if_L4_active:[])];
@@ -107,7 +111,15 @@ export class Simulation {
     if(a.class==='mixed')this.events.push(a.born+a.plannedStay*this.config.population.mixed_exploration_fraction_of_planned_stay,1,'preferences',a.id);
     return a;
   }
-  expired(a){return this.options.mode==='arrival'&&this.t-a.born>=a.plannedStay;}
+  expired(a){return a.departureRequestedAt!==null;}
+  selectDeparture(draw){
+    this.departureAttempts++;
+    const pool=[...this.active].filter(id=>this.agents[id].departureRequestedAt===null);
+    if(!pool.length)return;
+    const a=this.agents[pool[Math.floor(draw*pool.length)]];
+    a.departureRequestedAt=this.t;this.departureSelections++;
+    if(a.state==='BASE_DECISION')this.exit(a);
+  }
   observe(a){const id=this.mountain.baseLift[a.node];if(id&&this.mountain.scenario.active_lifts.includes(id)){a.memory[id]=this.queueSize(id);a.seen[id]=this.t;}}
   chooseLift(a,opening=false){
     if(!opening)this.observe(a);
@@ -188,6 +200,7 @@ export class Simulation {
       if(e.kind==='close')this.close();
       else if(e.kind==='board')this.board(e.data);
       else if(e.kind==='spawn'){const a=this.createAgent(e.data);this.commit(a,this.chooseLift(a));}
+      else if(e.kind==='departure')this.selectDeparture(e.data);
       else if(e.kind==='summit')this.descent(this.agents[e.data]);
       else if(e.kind==='edge')this.endEdge(this.agents[e.data]);
       else if(e.kind==='preferences'){const a=this.agents[e.data];if(a.state!=='EXITED'){const ids=preferredLifts(a.waits,this.config.population.mixed_preferred_lift_count,this.random);if(ids.length)a.preferred=ids;}}
@@ -202,7 +215,7 @@ export class Simulation {
     for(const id of Object.keys(this.queues)){
       const q=this.queues[id],l=this.mountain.lifts[id],active=this.mountain.scenario.active_lifts.includes(id);
       const prev=this.samples.findLast(r=>r.lift===id),interval=prev?(this.t-prev.seconds)/60:0;
-      this.samples.push({seconds:this.t,minutes:this.t/60,lift:id,active,queue:this.queueSize(id),estimatedWaitMinutes:active?this.queueSize(id)/(l.capacity_skiers_per_hour/60):null,joined:q.joined,boarded:q.boarded,closingExits:q.closingExits,arrivalRatePerMinute:interval?(q.joined-prev.joined)/interval:null,boardingRatePerMinute:interval?(q.boarded-prev.boarded)/interval:null,queuePersonMinutes:(q.area+this.queueSize(id)*(this.t-q.changedAt))/60,completedWaitMeanMinutes:q.waitCount?q.waitTotal/q.waitCount/60:null,activePopulation:this.active.size});
+      this.samples.push({seconds:this.t,minutes:this.t/60,lift:id,active,queue:this.queueSize(id),estimatedWaitMinutes:active?this.queueSize(id)/(l.capacity_skiers_per_hour/60):null,joined:q.joined,boarded:q.boarded,closingExits:q.closingExits,arrivalRatePerMinute:interval?(q.joined-prev.joined)/interval:null,boardingRatePerMinute:interval?(q.boarded-prev.boarded)/interval:null,queuePersonMinutes:(q.area+this.queueSize(id)*(this.t-q.changedAt))/60,completedWaitMeanMinutes:q.waitCount?q.waitTotal/q.waitCount/60:null,activePopulation:this.active.size,departureSelections:this.departureSelections,exitedPopulation:this.agents.length-this.active.size});
     }
   }
   position(a){
@@ -210,10 +223,10 @@ export class Simulation {
     const pts=a.edge.points,length=sumLength(pts),fraction=Math.max(0,Math.min(1,(this.t-a.edgeStart)/(a.edgeEnd-a.edgeStart)));let target=fraction*length;
     for(let i=1;i<pts.length;i++){const n=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1])*2;if(target<=n)return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*target/n,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*target/n];target-=n;}return pts.at(-1);
   }
-  agentRows(){return this.agents.map(a=>{const c=this.counters(a);return {id:a.id,class:a.class,subtype:a.subtype,assignedLift:a.home,assignedRun:a.run,bornMinutes:a.born/60,plannedStayMinutes:a.plannedStay/60,exitMinutes:a.exitedAt==null?null:a.exitedAt/60,state:a.state,skiingMinutes:c.skiing/60,queueMinutes:c.queue/60,liftMinutes:c.uphill/60,transitMinutes:c.transit/60,laps:a.laps,switches:a.switches,preferredLifts:a.preferred?.join('|')??''};});}
+  agentRows(){return this.agents.map(a=>{const c=this.counters(a);return {id:a.id,class:a.class,subtype:a.subtype,assignedLift:a.home,assignedRun:a.run,bornMinutes:a.born/60,plannedStayMinutes:a.plannedStay/60,exitMinutes:a.exitedAt==null?null:a.exitedAt/60,departureRequestedMinutes:a.departureRequestedAt===null?null:a.departureRequestedAt/60,state:a.state,skiingMinutes:c.skiing/60,queueMinutes:c.queue/60,liftMinutes:c.uphill/60,transitMinutes:c.transit/60,laps:a.laps,switches:a.switches,preferredLifts:a.preferred?.join('|')??''};});}
   summary(){
     const perLift={};for(const [id,q] of Object.entries(this.queues)){const size=this.queueSize(id),dt=this.t-q.changedAt,area=q.area+size*dt,duration=Math.min(this.t||1,this.closeTime),mean=area/duration;perLift[id]={joined:q.joined,boarded:q.boarded,closingExits:q.closingExits,peakQueue:q.peak,queuePersonMinutes:area/60,meanQueue:mean,queueStandardDeviation:Math.sqrt(Math.max(0,(q.squaredArea+size*size*dt)/duration-mean*mean)),meanCompletedWaitMinutes:q.waitCount?q.waitTotal/q.waitCount/60:null,maxCompletedWaitMinutes:q.waitCount?q.maxWait/60:null,closingUnboardedWaitMinutes:q.abandonedWait/60};}
-    const rows=this.agentRows();return {options:{...this.options},finished:this.done,elapsedMinutes:this.t/60,spawned:this.agents.length,active:this.active.size,switches:this.switches,meanArrivalBeliefErrorMinutes:this.beliefN?this.beliefAbs/this.beliefN:null,perLift,totalQueuePersonMinutes:Object.values(perLift).reduce((s,q)=>s+q.queuePersonMinutes,0),meanSkiingMinutes:rows.length?rows.reduce((s,a)=>s+a.skiingMinutes,0)/rows.length:0};
+    const rows=this.agentRows();return {options:{...this.options},finished:this.done,elapsedMinutes:this.t/60,spawned:this.agents.length,active:this.active.size,flowSwitchMinutes:this.flowSwitchTime/60,departureAttempts:this.departureAttempts,departureSelections:this.departureSelections,switches:this.switches,meanArrivalBeliefErrorMinutes:this.beliefN?this.beliefAbs/this.beliefN:null,perLift,totalQueuePersonMinutes:Object.values(perLift).reduce((s,q)=>s+q.queuePersonMinutes,0),meanSkiingMinutes:rows.length?rows.reduce((s,a)=>s+a.skiingMinutes,0)/rows.length:0};
   }
   assertInvariants(){
     const seen=new Set();

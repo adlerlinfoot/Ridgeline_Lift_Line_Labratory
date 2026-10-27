@@ -64,19 +64,20 @@ test('mixed preferences freeze at threshold using prior completed waits and neve
   const c=only('mixed');const s=new Simulation(map,c,{initialAgents:0,dayMinutes:10});const a=s.createAgent({class:'mixed',runU:0,spawnU:0,stay:10});s.commit(a,'L1');a.waits={L1:{total:60,count:1}};
   advance(s,240);assert.deepEqual(a.preferred,['L1']);a.waits.L2={total:0,count:1};s.chooseLift(a);assert.deepEqual(a.preferred,['L1']);
 });
-test('personal stay expiry cannot abandon a queue; closing still removes it',()=>{
-  const c=only('vacationer');c.spawning.personal_stay_minutes={min:.01,max:.01};const s=new Simulation(map,c,{initialAgents:100,mode:'arrival',arrivalRate:0,dayMinutes:2});
+test('requested departures cannot abandon a queue; closing still removes it',()=>{
+  const c=only('vacationer');const s=new Simulation(map,c,{initialAgents:100,mode:'arrival',arrivalRate:0,dayMinutes:2});
+  for(const a of s.agents)a.departureRequestedAt=0;
   advance(s,10);assert.equal(s.agents.filter(a=>a.state==='EXITED').length,0);assert.equal(s.queueSize('L3'),99);
   advance(s,120);assert.equal(s.queues.L3.boarded,19);assert.equal(s.queues.L3.closingExits,81);s.run();s.assertInvariants();
 });
-test('expired base transfer finishes its current segment, then exits',()=>{
-  const c=clone(config);c.spawning.personal_stay_minutes={min:1,max:1};const s=new Simulation(map,c,{mode:'arrival',arrivalRate:0,initialAgents:0});
-  const a=s.createAgent({class:'all_mountain',runU:0,spawnU:0,stay:1});a.node='W_BASE';s.commit(a,'L2');const first=a.edge.seconds;advance(s,first);assert.equal(a.state,'EXITED');assert.equal(a.node,'M_BASE');assert.equal(s.queues.L2.joined,0);s.assertInvariants();
+test('requested departure during base transfer finishes its segment, then exits',()=>{
+  const c=clone(config);const s=new Simulation(map,c,{mode:'arrival',arrivalRate:0,initialAgents:0});
+  const a=s.createAgent({class:'all_mountain',runU:0,spawnU:0,stay:1});a.node='W_BASE';s.commit(a,'L2');s.selectDeparture(0);const first=a.edge.seconds;advance(s,first);assert.equal(a.state,'EXITED');assert.equal(a.node,'M_BASE');assert.equal(s.queues.L2.joined,0);s.assertInvariants();
 });
-test('paired scenarios share demand times, classes and stays; Poisson counts are plausible',()=>{
+test('paired scenarios share arrival traits and preference horizons; Poisson counts are plausible',()=>{
   const a=new Simulation(map,config,{initialAgents:0,mode:'arrival'}),b=new Simulation(map,config,{initialAgents:0,mode:'arrival',scenario:'four_lift_intervention'});a.run();b.run();
   assert.deepEqual(a.agents.map(x=>[x.born,x.class,x.subtype,x.plannedStay]),b.agents.map(x=>[x.born,x.class,x.subtype,x.plannedStay]));
-  assert.ok(a.agents.length>1100&&a.agents.length<1450);
+  assert.ok(a.agents.length>500&&a.agents.length<760);
   const r=seededRandom(8);let n=0;for(let i=0;i<10000;i++)n+=r();assert.ok(Math.abs(n/10000-.5)<.02);
 });
 test('batch configurations, replicate-level uncertainty and CSV quoting',()=>{
@@ -84,4 +85,28 @@ test('batch configurations, replicate-level uncertainty and CSV quoting',()=>{
   assert.throws(()=>configurations({mode:'fixed',seed:1},[2],1));
   const g=aggregate([10,20,30].map(queuePersonMinutes=>({mode:'fixed',scenario:'baseline',arrivalRate:0,queuePersonMinutes})))[0];assert.equal(g.meanQueuePersonMinutes,20);assert.ok(g.ci95Low<20&&g.ci95High>20);
   assert.equal(csv([{a:'x,"y',b:3}]),'"a","b"\n"x,""y","3"');
+});
+test('arrival flow reverses at halfway, selecting unique existing skiers for safe departures',()=>{
+  const s=new Simulation(map,config,{mode:'arrival',arrivalRate:3});
+  const spawns=s.events.a.filter(e=>e.kind==='spawn'),departures=s.events.a.filter(e=>e.kind==='departure');
+  assert.equal(s.flowSwitchTime,210*60);assert.ok(spawns.length>500&&departures.length>500);
+  assert.ok(spawns.every(e=>e.time<210*60));assert.ok(departures.every(e=>e.time>210*60&&e.time<420*60));
+  advance(s,210*60);assert.equal(s.departureSelections,0);assert.equal(s.agents.length-s.active.size,0);
+  const count=s.agents.length;advance(s,300*60);assert.equal(s.agents.length,count);assert.ok(s.departureSelections>0);
+  assert.equal(s.agents.filter(a=>a.departureRequestedAt!==null).length,s.departureSelections);
+  s.run();s.assertInvariants();assert.equal(s.active.size,0);
+  const fixed=new Simulation(map,config,{mode:'fixed',arrivalRate:12});assert.equal(fixed.events.a.filter(e=>e.kind==='departure'||e.kind==='spawn').length,0);
+});
+test('departure requested on a descent exits only when its full itinerary completes',()=>{
+  const s=new Simulation(map,only('vacationer'),{mode:'arrival',arrivalRate:0,initialAgents:1});
+  advance(s,280);const a=s.agents[0];assert.equal(a.state,'SKI_RUN');s.selectDeparture(0);const end=a.edgeEnd;
+  advance(s,end-0.1);assert.equal(a.state,'SKI_RUN');advance(s,end);assert.equal(a.state,'EXITED');assert.equal(a.laps,1);s.assertInvariants();
+});
+test('departure selections saturate at population without repeat selection or negative counts',()=>{
+  const s=new Simulation(map,config,{initialAgents:2});s.selectDeparture(0);s.selectDeparture(0);s.selectDeparture(0);assert.equal(s.departureAttempts,3);assert.equal(s.departureSelections,2);assert.equal(s.active.size,2);s.run();s.assertInvariants();
+});
+test('morning arrivals follow the 25/35/15/25 class probabilities',()=>{
+  const counts={all_mountain:0,vacationer:0,lapper:0,mixed:0};let n=0;
+  for(let seed=0;seed<30;seed++){const s=new Simulation(map,config,{mode:'arrival',initialAgents:0,seed});for(const e of s.events.a)if(e.kind==='spawn'){counts[e.data.class]++;n++;}}
+  for(const [cls,p] of Object.entries({all_mountain:.25,vacationer:.35,lapper:.15,mixed:.25}))assert.ok(Math.abs(counts[cls]/n-p)<.02,cls);
 });

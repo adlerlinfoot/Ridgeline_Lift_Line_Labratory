@@ -17,13 +17,13 @@ Choose settings before starting; Reset unlocks them. Speed affects playback only
 ## Confirmed behavior
 
 - Both modes start with a 650-skier opening rush, uniformly placed among each skier's admissible bases. All observe zero queues simultaneously, choose destinations, then enter queues in seeded-random admission order.
-- **Fixed population:** no new arrivals or personal departures; everyone circulates until closing. **Arrival mode:** opening rush plus homogeneous Poisson arrivals (default 3/minute), planned stays uniform in 120–360 minutes.
+- **Fixed population:** no new arrivals or personal departures; everyone circulates until closing. **Arrival mode:** opening rush plus Poisson arrivals until minute 210 (default 3/minute), then equal-rate Poisson selections for departures from the existing active pool. No further afternoon arrivals or random stay-based departures. Incoming class probabilities are 25%/35%/15%/25%, not exact finite-sample quotas.
 - Destination minimizes feasible valley transfer minutes + personally remembered queue count/capacity + lift ride minutes. Ties are uniformly random among equal minima. Current-base memory refreshes before choice; remote memory refreshes only on physical visits. Committed arrivals cannot reroute.
 - Main classes: all-mountain 25%, vacationer 35%, lapper 15%, mixed 25%. Lapper subtype weights **10:2:5 conditional on being a lapper**. Park specialists can choose L1/L2; race specialists always use L1/T01/B10/T06; other specialists repeat one assigned full run.
-- Mixed skiers freeze up to two experienced lifts with the lowest mean completed personal waits at 40% of their planned stay. One experienced lift remains one. If none has completed a wait, freeze at the first subsequent base decision with experience. Fixed-mode threshold uses 40% of the operating day. Equal average waits use seeded random tie-breaking.
+- Mixed skiers freeze up to two experienced lifts with the lowest mean completed personal waits at 40% of the time from arrival to closing. One experienced lift remains one. If none has completed a wait, freeze at the first subsequent base decision with experience. Fixed-mode threshold uses 40% of the operating day. Equal average waits use seeded random tie-breaking.
 - General downhill choices are discrete uniform over complete legal itineraries, not sequential junction draws. P01 continues along lower B01; upper connectors continue down lower terrain. T06 completes race itineraries to W_BASE.
 - Instant individual boarding occurs on evenly spaced capacity slots (every 6 seconds on all four lifts; capacity 600/h each). Empty slots expire. First slots occur after one interval. No queue abandonment before closing.
-- A planned stay expiring in a queue does not interrupt the lap. Expiry during base transit ends at the current segment's endpoint. At closing (420 minutes), boarding and arrivals stop; queues exit. Riders and descending skiers finish full safe itineraries; base transfers end at the next base.
+- A departure selection does not interrupt a committed queue, ride or descent. A selected skier in base transit exits at the next base. Skier selection is uniform without selecting an already-marked skier again. Actual departures lag selection until the safe exit. At closing (420 minutes), boarding and arrivals stop; queues exit. Riders and descending skiers finish full safe itineraries; base transfers end at the next base.
 
 ## Infrastructure scenarios
 
@@ -56,7 +56,7 @@ node scripts/batch.mjs fixed 20
 node scripts/batch.mjs arrival 20
 ```
 
-Results go to ignored `.runtime/`. Arrival batches use rates 2, 3, 4 and 6/minute. Identical seeds pre-generate identical exogenous demand times, classes, subtypes and stays across scenarios; scenario-specific admissibility and assignments legitimately differ. Endogenous behavioral draws diverge across scenarios, so this is not identical routing noise.
+Results go to ignored `.runtime/`. Arrival batches use rates 2, 3, 4 and 6/minute. Identical seeds pre-generate identical exogenous arrival times, classes, subtypes and departure-selection event times/draws across scenarios; scenario-specific admissibility and assignments legitimately differ. Endogenous behavioral draws diverge across scenarios, so this is not identical routing noise.
 
 ## Structure and limitations
 
@@ -68,3 +68,7 @@ Results go to ignored `.runtime/`. Arrival batches use rates 2, 3, 4 and 6/minut
 - The original PDF is retained as draft background, not an implementation/result report. Its completed-work language and bibliography errors have not been edited. All capacities, speeds, geometry, shares and behavioral thresholds are synthetic assumptions.
 
 No external services are needed. See [acceptance criteria](spec/ACCEPTANCE_TESTS.md) and [implementation decisions](spec/OPEN_DECISIONS.md).
+
+## Two-phase flow update
+
+The halfway boundary is half the configured operating day (210 of 420 minutes). Morning counts and afternoon selection counts are independent Poisson processes at the same rate, not forced equal counts. Selection events are skipped if every remaining skier is already marked. Fixed mode has neither process. The exported legacy plannedStayMinutes field now means available time from spawn to closing for preference timing only; it does not trigger departure. Exports include selection counts, requested timestamps and actual exit timestamps.
