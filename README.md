@@ -4,6 +4,14 @@ A buildless browser ABM for **The Influence of Heterogeneous Skier Decisions on 
 
 ## Run locally
 
+One command from any terminal on this laptop starts the server and opens the site:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Adler\repo-reviews\Lift_Line_ABM\Start-Ridgeline.ps1"
+```
+
+From the repository folder, you can also use `npm start`. Reuses an already running server.
+
 Requires Node.js 20+ (22+ recommended).
 
 ```powershell
