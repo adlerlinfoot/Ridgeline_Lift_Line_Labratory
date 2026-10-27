@@ -1,0 +1,160 @@
+// Schematic 3D route skeleton. Node heights are supplied; intermediate heights are
+// interpolated by planar arc length. This is a view, never a second simulation.
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+const liftColors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
+const classColors={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
+const trailColors={green:'#68be91',blue:'#65a3d9',black:'#afc3ce',park:'#e5a15e'};
+
+export function elevatedPolyline(points,from,to,nodes) {
+  const lengths=[0];
+  for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+distance(points[i-1],points[i]));
+  const total=lengths.at(-1),a=nodes[from].elevation_m,b=nodes[to].elevation_m;
+  return points.map((p,i)=>[p[0],p[1],a+(b-a)*(total?lengths[i]/total:0)]);
+}
+
+export function skeletonRoutes(map) {
+  const nodes=Object.fromEntries(map.nodes.map(n=>[n.id,n])),routes=[];
+  for(const run of map.runs) {
+    const anchors=[{node_id:run.start_node,polyline_index:0},...(run.junction_nodes??[]),{node_id:run.end_node,polyline_index:run.polyline.length-1}].sort((a,b)=>a.polyline_index-b.polyline_index);
+    const points=[];
+    for(let i=1;i<anchors.length;i++) {
+      const a=anchors[i-1],b=anchors[i];
+      const segment=elevatedPolyline(run.polyline.slice(a.polyline_index,b.polyline_index+1),a.node_id,b.node_id,nodes);
+      points.push(...(points.length?segment.slice(1):segment));
+    }
+    routes.push({id:run.id,kind:'run',name:run.name,points,color:trailColors[run.difficulty],length:run.centerline_length_m});
+  }
+  for(const t of map.transfers)routes.push({id:t.id,kind:'transfer',name:t.name,points:elevatedPolyline(t.polyline,t.from,t.to,nodes),color:'#6e929f',length:t.centerline_length_m});
+  for(const l of map.lifts) {
+    const a=nodes[l.base],b=nodes[l.top];
+    routes.push({id:l.id,kind:'lift',name:l.name,points:[[a.x,a.y,a.elevation_m],[b.x,b.y,b.elevation_m]],color:liftColors[l.id],length:l.centerline_length_m});
+  }
+  return routes;
+}
+
+export function agentWorldPosition(sim,a) {
+  const [x,y]=sim.position(a);
+  if(!a.edge||a.state==='QUEUE'||a.state==='EXITED')return [x,y,sim.mountain.nodes[a.node].elevation_m];
+  const f=clamp((sim.t-a.edgeStart)/(a.edgeEnd-a.edgeStart),0,1);
+  const start=sim.mountain.nodes[a.edge.from].elevation_m,end=sim.mountain.nodes[a.edge.to].elevation_m;
+  return [x,y,start+(end-start)*f];
+}
+
+export function defaultCamera(){return {yaw:-0.24,pitch:0.62,zoom:1,panX:0,panY:0,vertical:1.5};}
+
+export function projectPoint(point,camera,width,height) {
+  const x=(point[0]-700)*2,z=(point[1]-480)*2,y=(point[2]-2700)*camera.vertical;
+  const rx=Math.cos(camera.yaw)*x+Math.sin(camera.yaw)*z;
+  const rz=-Math.sin(camera.yaw)*x+Math.cos(camera.yaw)*z;
+  const up=Math.cos(camera.pitch)*y-Math.sin(camera.pitch)*rz;
+  const depth=Math.sin(camera.pitch)*y+Math.cos(camera.pitch)*rz;
+  const perspective=5000/(5000-depth),scale=Math.min(width/3300,height/2200)*camera.zoom;
+  return {x:width/2+rx*perspective*scale+camera.panX,y:height*.49-up*perspective*scale+camera.panY,depth};
+}
+
+function lineDistance(p,a,b) {
+  const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
+  return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);
+}
+
+export class Mountain3D {
+  constructor(canvas,map,{onSelect=()=>{},onHover=()=>{}}={}) {
+    this.canvas=canvas;this.map=map;this.routes=skeletonRoutes(map);this.camera=defaultCamera();
+    this.onSelect=onSelect;this.onHover=onHover;this.labels=true;this.hits=[];this.routeHits=[];this.drag=null;this.pointers=new Map();this.hover=null;
+    this.bind();
+  }
+  reset(){this.camera=defaultCamera();this.hover=null;}
+  bind() {
+    const el=this.canvas;
+    const local=e=>{const r=el.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
+    el.addEventListener('contextmenu',e=>e.preventDefault());
+    el.addEventListener('pointerdown',e=>{
+      el.focus({preventScroll:true});el.setPointerCapture(e.pointerId);
+      const p=local(e);this.pointers.set(e.pointerId,p);
+      this.drag={...p,startX:p.x,startY:p.y,moved:false,pan:e.shiftKey||e.button!==0};
+      this.hover=null;
+    });
+    el.addEventListener('pointermove',e=>{
+      const p=local(e);
+      if(this.pointers.has(e.pointerId)) {
+        const before=[...this.pointers.values()];this.pointers.set(e.pointerId,p);
+        if(this.pointers.size===2) {
+          const after=[...this.pointers.values()],d0=distance([before[0].x,before[0].y],[before[1].x,before[1].y]),d1=distance([after[0].x,after[0].y],[after[1].x,after[1].y]);
+          this.camera.zoom=clamp(this.camera.zoom*(d0?d1/d0:1),.4,4);
+          this.camera.panX+=(after[0].x+after[1].x-before[0].x-before[1].x)/2;
+          this.camera.panY+=(after[0].y+after[1].y-before[0].y-before[1].y)/2;
+          if(this.drag)this.drag.moved=true;
+        } else if(this.drag) {
+          const dx=p.x-this.drag.x,dy=p.y-this.drag.y;
+          if(this.drag.pan){this.camera.panX+=dx;this.camera.panY+=dy;}
+          else{this.camera.yaw+=dx*.007;this.camera.pitch=clamp(this.camera.pitch+dy*.006,.08,1.5);}
+          this.drag.moved ||= Math.hypot(p.x-this.drag.startX,p.y-this.drag.startY)>4;
+        }
+        if(this.drag){this.drag.x=p.x;this.drag.y=p.y;}
+      } else {
+        this.hover=this.pick(p);this.onHover(this.hover?.text??'Drag to orbit · scroll to zoom · Shift-drag to pan · click a skier');
+        el.style.cursor=this.hover?.type==='agent'?'pointer':'grab';
+      }
+    });
+    const end=e=>{
+      if(e.type==='pointerup'&&this.drag&&!this.drag.moved){const hit=this.pick(local(e));if(hit?.type==='agent')this.onSelect(hit.id);else if(hit)this.onHover(hit.text);}
+      this.pointers.delete(e.pointerId);this.drag=null;
+    };
+    for(const event of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(event,end);
+    el.addEventListener('pointerleave',()=>{if(!this.drag){this.hover=null;this.onHover('Drag to orbit · scroll to zoom · Shift-drag to pan · click a skier');}});
+    el.addEventListener('wheel',e=>{e.preventDefault();this.camera.zoom=clamp(this.camera.zoom*Math.exp(-e.deltaY*.001),.4,4);},{passive:false});
+    el.addEventListener('keydown',e=>{
+      if(e.key==='ArrowLeft')this.camera.yaw-=.1;
+      else if(e.key==='ArrowRight')this.camera.yaw+=.1;
+      else if(e.key==='ArrowUp')this.camera.pitch=clamp(this.camera.pitch-.08,.08,1.5);
+      else if(e.key==='ArrowDown')this.camera.pitch=clamp(this.camera.pitch+.08,.08,1.5);
+      else if(['+','='].includes(e.key))this.camera.zoom=clamp(this.camera.zoom*1.1,.4,4);
+      else if(e.key==='-')this.camera.zoom=clamp(this.camera.zoom/1.1,.4,4);
+      else if(e.key==='Home')this.reset();else return;
+      e.preventDefault();
+    });
+  }
+  pick(p) {
+    let closest=null,best=11;
+    for(const hit of this.hits){const d=Math.hypot(p.x-hit.x,p.y-hit.y);if(d<best){best=d;closest=hit;}}
+    if(closest)return closest;
+    best=6;
+    for(const hit of this.routeHits)for(let i=1;i<hit.points.length;i++){const d=lineDistance(p,hit.points[i-1],hit.points[i]);if(d<best){best=d;closest=hit;}}
+    return closest;
+  }
+  draw(sim,selected=null) {
+    const el=this.canvas,rect=el.getBoundingClientRect();if(!rect.width||!rect.height)return;
+    const width=rect.width,height=rect.height,dpr=Math.min(window.devicePixelRatio||1,2);
+    if(el.width!==Math.round(width*dpr)||el.height!==Math.round(height*dpr)){el.width=Math.round(width*dpr);el.height=Math.round(height*dpr);}
+    const c=el.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,width,height);c.fillStyle='#0e2029';c.fillRect(0,0,width,height);
+    const project=p=>projectPoint(p,this.camera,width,height);
+    const trace=(points,color,lineWidth=1,dash=[])=>{c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.strokeStyle=color;c.lineWidth=lineWidth;c.setLineDash(dash);c.stroke();c.setLineDash([]);};
+    for(let x=0;x<=1400;x+=200)trace([project([x,0,2330]),project([x,960,2330])],'#223943');
+    for(let y=0;y<=960;y+=160)trace([project([0,y,2330]),project([1400,y,2330])],'#223943');
+    // Datum guides show elevation without inventing a mountain surface.
+    for(const n of this.map.nodes)if(n.kind==='lift_top')trace([project([n.x,n.y,2330]),project([n.x,n.y,n.elevation_m])],'#39505b',1,[3,5]);
+    const activeRuns=new Set(sim.mountain.scenario.active_run_ids),activeLifts=new Set(sim.mountain.scenario.active_lifts);
+    const routes=this.routes.map(r=>({...r,screen:r.points.map(project)})).sort((a,b)=>a.screen.reduce((s,p)=>s+p.depth,0)/a.screen.length-b.screen.reduce((s,p)=>s+p.depth,0)/b.screen.length);
+    this.routeHits=[];
+    for(const r of routes){
+      const active=r.kind==='run'?activeRuns.has(r.id):r.kind==='lift'?activeLifts.has(r.id):true;
+      trace(r.screen,active?r.color:'#364952',this.hover?.id===r.id?3.5:r.kind==='lift'?2.5:1.5,r.kind==='transfer'?[4,4]:[]);
+      this.routeHits.push({type:'route',id:r.id,points:r.screen,text:`${r.id} · ${r.name} · ${Math.round(r.length)} m${active?'':' · closed'}`});
+    }
+    this.hits=[];
+    const agents=[...sim.active].map(id=>sim.agents[id]).filter(a=>a.state!=='QUEUE').map(a=>({a,p:project(agentWorldPosition(sim,a))})).sort((a,b)=>a.p.depth-b.p.depth);
+    for(const {a,p} of agents){c.beginPath();c.arc(p.x,p.y,a.id===selected?4.5:2.5,0,Math.PI*2);c.fillStyle=classColors[a.class];c.fill();if(a.id===selected){c.strokeStyle='#fff';c.lineWidth=1.5;c.stroke();}this.hits.push({...p,type:'agent',id:a.id,text:`Skier #${a.id} · ${a.class} · ${a.state}`});}
+    c.font='10px system-ui';c.textAlign='center';c.textBaseline='middle';
+    for(const n of this.map.nodes){
+      const p=project([n.x,n.y,n.elevation_m]),lift=this.map.lifts.find(l=>l.base===n.id),color=lift?liftColors[lift.id]:'#a0bdc8';
+      if(lift&&activeLifts.has(lift.id)){
+        c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fillStyle='#0a1822ee';c.fill();c.strokeStyle=color;c.lineWidth=1.5;c.stroke();c.fillStyle='#f1f6f3';c.font='600 11px system-ui';c.fillText(sim.queueSize(lift.id),p.x,p.y);c.font='10px system-ui';
+      }else{c.beginPath();c.arc(p.x,p.y,3.5,0,Math.PI*2);c.fillStyle=color;c.fill();}
+      if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:n.id.replaceAll('_',' ');c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,p.y+17,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,p.y+24);}
+      this.hits.push({...p,type:'node',id:n.id,text:`${lift?lift.id+' · ':''}${n.id.replaceAll('_',' ')} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
+    }
+    c.textAlign='left';c.fillStyle='#7898a5';c.font='10px system-ui';c.fillText('NODE ELEVATIONS + INTERPOLATED ROUTE HEIGHTS',12,height-15);
+    if(this.hover){c.fillStyle='#e0eee8';c.fillText(this.hover.text.slice(0,Math.floor(width/6.5)),12,20);}
+  }
+}

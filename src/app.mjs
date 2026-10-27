@@ -1,10 +1,11 @@
 import {Simulation,csv} from './engine.mjs';
+import {Mountain3D} from './mountain3d.mjs';
 const $=id=>document.getElementById(id);
 const colors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
 const classes={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const labels={baseline_3_lifts:'3 lifts · baseline',four_lift_capacity_control:'4 lifts · vacationers on L3',four_lift_intervention:'4 lifts · expanded access'};
 const fmt=(x,d=0)=>x==null?'—':Number(x).toLocaleString(undefined,{maximumFractionDigits:d});
-let map,config,sim,running=false,locked=false,previous=0,accumulator=0,lastPaint=0,batchWorker,batchData,selected=null,positions=[];
+let map,config,sim,running=false,locked=false,previous=0,accumulator=0,lastPaint=0,view3d,selected=null,positions=[];
 function message(text){$('error').hidden=!text;$('error').textContent=text;}
 function options(){
   const o={scenario:$('scenario').value,mode:$('mode').value,seed:Number($('seed').value),initialAgents:Number($('population').value),arrivalRate:Number($('rate').value)};
@@ -30,6 +31,7 @@ function drawAgents(){
   const c=$('agents').getContext('2d');c.clearRect(0,0,1400,960);positions=[];
   for(const aid of sim.active){const a=sim.agents[aid];if(a.state==='QUEUE')continue;const [x,y]=sim.position(a);positions.push({id:aid,x,y});c.fillStyle=classes[a.class];c.beginPath();c.arc(x,y,selected===aid?5:2.7,0,Math.PI*2);c.fill();if(selected===aid){c.strokeStyle='#fff';c.lineWidth=1.5;c.stroke();}}
   for(const l of map.lifts){if(!sim.mountain.scenario.active_lifts.includes(l.id))continue;const n=sim.mountain.nodes[l.base],q=sim.queueSize(l.id);c.beginPath();c.arc(n.x,n.y,20+Math.min(18,Math.sqrt(q)),0,Math.PI*2);c.fillStyle='#101e27ed';c.fill();c.strokeStyle=colors[l.id];c.lineWidth=2;c.stroke();c.fillStyle='#eef4ee';c.font='600 19px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText(q,n.x,n.y);}
+  view3d?.draw(sim,selected);
 }
 function chart(){
   const canvas=$('chart'),rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
@@ -63,28 +65,22 @@ function frame(now){
 }
 try{
   [map,config]=await Promise.all(['resort-map.json','MODEL_CONFIG.json'].map(async f=>{const r=await fetch(f);if(!r.ok)throw new Error(`Could not load ${f}`);return r.json();}));
+  view3d=new Mountain3D($('mountain-3d'),map,{onSelect:id=>{selected=id;render();},onHover:text=>{$('three-help').textContent=text;}});
   reset();
   $('play').onclick=()=>{if(sim.done)return;locked=true;running=!running;setSettings();$('play').textContent=running?'Pause':'Resume';};
   $('reset').onclick=reset;document.querySelectorAll('.setting').forEach(e=>e.onchange=()=>{if(!locked)reset();});
   $('chart-metric').onchange=chart;window.addEventListener('resize',chart);
+  document.querySelectorAll('[data-view]').forEach(button=>{if(button.tagName!=='BUTTON')return;button.onclick=()=>{
+    $('map-views').dataset.view=button.dataset.view;
+    document.querySelectorAll('button[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+    render();
+  };});
+  $('camera-reset').onclick=()=>{view3d.reset();$('height-scale').value=1.5;$('height-value').textContent='1.5×';render();};
+  $('height-scale').oninput=e=>{view3d.camera.vertical=Number(e.target.value);$('height-value').textContent=Number(e.target.value).toFixed(1)+'×';view3d.draw(sim,selected);};
+  $('node-labels').onchange=e=>{view3d.labels=e.target.checked;view3d.draw(sim,selected);};
   $('agents').onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)*1400/r.width,y=(e.clientY-r.top)*960/r.height;let best=18,aid=null;for(const p of positions){const d=Math.hypot(p.x-x,p.y-y);if(d<best){best=d;aid=p.id;}}selected=aid;render();};
   $('export-json').onclick=()=>download(`ridgeline-${sim.options.seed}.json`,JSON.stringify(runExport(),null,2),'application/json');
   $('export-series').onclick=()=>download(`ridgeline-queues-${sim.options.seed}.csv`,csv(sim.samples),'text/csv');
   $('export-agents').onclick=()=>download(`ridgeline-skiers-${sim.options.seed}.csv`,csv(sim.agentRows()),'text/csv');
-  $('batch-start').onclick=()=>{try{
-    const base=options(),rates=$('batch-rates').value.split(',').map(x=>Number(x.trim())),repetitions=Number($('replicates').value);
-    if(!Number.isInteger(repetitions)||repetitions<20||repetitions>200||!rates.length||rates.length>10||rates.some(x=>!Number.isFinite(x)||x<0||x>12))throw new Error('Use 20–200 replications and up to ten arrival rates between 0 and 12.');
-    batchData=null;$('batch-csv').disabled=true;$('batch-json').disabled=true;$('batch-start').disabled=true;$('batch-cancel').disabled=false;$('batch-progress').value=0;$('batch-results').querySelector('tbody').replaceChildren();
-    batchWorker=new Worker(new URL('./batch-worker.mjs',import.meta.url),{type:'module'});
-    batchWorker.onmessage=({data})=>{
-      if(data.type==='progress'){$('batch-progress').max=data.total;$('batch-progress').value=data.completed;$('batch-status').textContent=`Completed ${data.completed} / ${data.total} replications.`;}
-      if(data.type==='error'){message(data.message);finishBatch();}
-      if(data.type==='done'){batchData={schema:'ridgeline-batch-1',options:base,repetitions,rates,config,topology:map,rows:data.rows,groups:data.groups};$('batch-results').querySelector('tbody').replaceChildren(...data.groups.map(g=>{const tr=document.createElement('tr');for(const v of [labels[g.scenario],g.mode==='fixed'?'fixed':g.arrivalRate,g.replicates,fmt(g.meanQueuePersonMinutes),`${fmt(g.ci95Low)} – ${fmt(g.ci95High)}`]){const td=document.createElement('td');td.textContent=v;tr.append(td);}return tr;}));$('batch-status').textContent='Complete. Confidence intervals describe run-to-run uncertainty, not proof of equilibrium stability.';$('batch-csv').disabled=false;$('batch-json').disabled=false;finishBatch();}
-    };batchWorker.onerror=e=>{message(e.message||'Batch worker failed');finishBatch();};batchWorker.postMessage({map,config,options:base,rates,repetitions});message('');
-  }catch(e){message(e.message);}};
-  function finishBatch(){batchWorker?.terminate();batchWorker=null;$('batch-start').disabled=false;$('batch-cancel').disabled=true;}
-  $('batch-cancel').onclick=()=>{finishBatch();$('batch-status').textContent='Batch cancelled. Incomplete comparisons are not reported.';};
-  $('batch-csv').onclick=()=>download('ridgeline-replicates.csv',csv(batchData.rows),'text/csv');
-  $('batch-json').onclick=()=>download('ridgeline-batch.json',JSON.stringify(batchData,null,2),'application/json');
   requestAnimationFrame(frame);
 }catch(e){message(`Could not start: ${e.message}. Serve this folder over HTTP; do not open index.html as a file.`);}

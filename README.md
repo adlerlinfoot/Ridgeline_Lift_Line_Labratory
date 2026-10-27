@@ -20,7 +20,7 @@ node scripts/serve.mjs
 
 Open **http://127.0.0.1:43880/**. On Windows, `Start-Ridgeline.ps1` starts a hidden local server and opens the page. If Node is not on PATH, use `& 'C:\Program Files\nodejs\node.exe' scripts/serve.mjs`.
 
-Choose settings before starting; Reset unlocks them. Speed affects playback only. Click a moving skier for its state, destination, remembered waits and observation times. Queue circles show counts rather than physically stacked dots. Batch experiments run in a background worker and can be cancelled. The static files also work on GitHub Pages; this implementation does not deploy or push automatically.
+Choose settings before starting; Reset unlocks them. Speed affects playback only. Click a moving skier for its state, destination, remembered waits and observation times. Queue circles show counts rather than physically stacked dots. Choose Both views, Flat map or 3D skeleton. The interactive skeleton mirrors the same live agents and queues. The static files also work on GitHub Pages; this implementation does not deploy or push automatically.
 
 ## Confirmed behavior
 
@@ -71,8 +71,8 @@ Results go to ignored `.runtime/`. Arrival batches use rates 2, 3, 4 and 6/minut
 - Root BEHAVIOR_SPEC.md, MODEL_CONFIG.json, MAP_SPEC.md, resort-map.json are canonical. Root paths replace the original context-pack's absent spec/topology copies.
 - `src/engine.mjs`: DOM-free simulation; event processing inside a fixed one-second driver, exact activity durations and service slots.
 - `reference/rules.mjs`: shared policy primitives; `src/experiments.mjs`: batch design/aggregation.
-- `src/app.mjs`, `index.html`, `styles.css`: static interface; `src/batch-worker.mjs`: background computation.
-- The supplied **terrain grid, heightmap and original SVGs were absent**. The interface preserves exact planar geometry and uses clearly schematic decorative contours; no physical 3D/elevation validation is claimed.
+- `src/app.mjs`, `index.html`, `styles.css`: static interface; `src/mountain3d.mjs`: dependency-free perspective Canvas renderer. Batch utilities remain available via CLI; the repeated-experiments browser panel has been removed.
+- The supplied **terrain grid, heightmap and original SVGs were absent**. The flat view preserves exact planar geometry. The 3D route skeleton uses supplied node elevations, interpolating interior heights by arc length between endpoints and explicit junctions. It does not reconstruct the absent terrain surface.
 - The original PDF is retained as draft background, not an implementation/result report. Its completed-work language and bibliography errors have not been edited. All capacities, speeds, geometry, shares and behavioral thresholds are synthetic assumptions.
 
 No external services are needed. See [acceptance criteria](spec/ACCEPTANCE_TESTS.md) and [implementation decisions](spec/OPEN_DECISIONS.md).
@@ -80,3 +80,9 @@ No external services are needed. See [acceptance criteria](spec/ACCEPTANCE_TESTS
 ## Two-phase flow update
 
 The halfway boundary is half the configured operating day (210 of 420 minutes). Morning counts and afternoon selection counts are independent Poisson processes at the same rate, not forced equal counts. Selection events are skipped if every remaining skier is already marked. Fixed mode has neither process. The exported legacy plannedStayMinutes field now means available time from spawn to closing for preference timing only; it does not trigger departure. Exports include selection counts, requested timestamps and actual exit timestamps.
+
+## Interactive 3D skeleton
+
+Both views share one Simulation instance, clock, seed, IDs, queue counts and selection. Drag the 3D view to orbit, wheel to zoom, Shift/right-drag to pan, pinch with two fingers to zoom/pan, or focus it and use arrow keys, +/- and Home. Height adjusts display exaggeration only; Labels toggles node labels. Reset camera restores the initial viewpoint. Click a moving skier in either view to inspect and highlight it in both. Hover routes/nodes for IDs and elevation/length information. On smaller screens the mirrored views stack vertically; choose a single view for more room.
+
+3D x/y are the exact route waypoints. Heights are interpolated between declared node elevations, honoring intermediate junctions such as PARK_MERGE. This is a skeletonized schematic, not a recovered heightfield or a new physical model. Camera actions never advance or randomize simulation state.

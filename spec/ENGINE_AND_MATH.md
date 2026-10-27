@@ -39,3 +39,7 @@ Batch confidence intervals are across independent seed replications. Shared seed
 ## Latest confirmed flow rule (supersedes personal-stay departure rules above)
 
 Arrival mode: independent Poisson arrivals before halfway (210 minutes of a 420-minute day); no arrivals afterward. Afternoon Poisson events at the same rate select uniformly from active, not-yet-selected skiers. Selected skiers finish committed queue/ride/descent, or exit at the next base if transferring. Do not select the same skier twice; skip selections when none eligible. No random personal-stay departures. Fixed mode unchanged. Class probabilities for incoming skiers remain 25/35/15/25. Mixed preference timing uses 40% of available time from arrival to close. Actual exits lag selections until a safe base.
+
+## Synchronized schematic 3D renderer
+
+The new 3D skeleton is presentation only. Physical lengths, times and decisions remain planar and unchanged. Routes retain exact x/y centerlines. z is linear in planar arc length between supplied endpoint elevations, with additional exact anchors at declared junctions. Agent heights use the same fraction on the active engine edge, matching those route anchors. Visual crossings never add connectivity. No heightfield is inferred.

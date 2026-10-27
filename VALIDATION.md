@@ -14,3 +14,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Two-phase flow revision
 
 21 automated tests pass after replacing random personal stays with morning arrivals/afternoon departure selections. Added halfway cutoff, no pre-halfway exits, no afternoon arrivals, non-repeated departure selection, safe descent completion, pool exhaustion and incoming class-proportion checks. Prior 300-run batch figures describe the earlier flow version and are not results for this revised flow.
+
+## Synchronized 3D visualization revision
+
+26 automated tests pass. Additional checks cover exact planar waypoints/node elevations/junction alignment, 3D agent progress matching flat positions, camera-only interaction, rendering without physics mutation/RNG access, and removal of repeated-experiments browser UI. Updated DOM integration checks exercise all three view modes, height/label controls, reset camera, keyboard orbit, simulation completion and the three remaining exports. An offline SVG recording of actual 3D Canvas draw commands was rendered and visually inspected for route layout and labels. This is not an actual browser screenshot; no browser surface is available for full rendered desktop/mobile verification. No physical terrain surface was inferred.

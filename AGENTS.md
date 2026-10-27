@@ -40,3 +40,5 @@ First run `python topology/validate_map.py`, `python tests/validate_context.py`,
 
 ## Current checkout layout and user overrides
 Root BEHAVIOR_SPEC.md, MODEL_CONFIG.json, MAP_SPEC.md and resort-map.json are canonical (older spec/topology paths refer to the original context-package layout). Read spec/ENGINE_AND_MATH.md and spec/ACCEPTANCE_TESTS.md for the implemented contract. Race lappers use L1 only; mixed preferences never supplement experienced lifts; both population modes start with a simultaneous zero-memory opening rush. User confirmation authorizes implementation and a local Git commit; no deployment or push requested. The supplied heightfield is absent: use exact 2D geometry without inventing terrain.
+
+Latest user-requested visualization: remove the repeated-experiments browser section. Add interactive synchronized 3D route skeleton using supplied node elevations and interpolated interior heights; this explicitly permits schematic 3D display without inventing a physical terrain field. Preserve planar topology and simulation timing. CLI batch tools are retained.

@@ -1,0 +1,75 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {Simulation} from '../src/engine.mjs';
+import {skeletonRoutes,agentWorldPosition,defaultCamera,projectPoint,Mountain3D} from '../src/mountain3d.mjs';
+const map=JSON.parse(readFileSync(new URL('../resort-map.json',import.meta.url)));
+const config=JSON.parse(readFileSync(new URL('../MODEL_CONFIG.json',import.meta.url)));
+const nodes=Object.fromEntries(map.nodes.map(n=>[n.id,n]));
+
+test('3D skeleton preserves every planar waypoint, node elevation and explicit junction',()=>{
+  const routes=skeletonRoutes(map),byId=Object.fromEntries(routes.map(r=>[r.id,r]));
+  assert.equal(routes.length,30);
+  for(const run of map.runs){
+    const r=byId[run.id];assert.deepEqual(r.points.map(p=>p.slice(0,2)),run.polyline);
+    assert.equal(r.points[0][2],nodes[run.start_node].elevation_m);
+    assert.ok(Math.abs(r.points.at(-1)[2]-nodes[run.end_node].elevation_m)<1e-9);
+    for(const j of run.junction_nodes??[])assert.equal(r.points[j.polyline_index][2],nodes[j.node_id].elevation_m);
+  }
+  assert.deepEqual(byId.P01.points.at(-1),byId.B01.points[3]);
+  assert.deepEqual(byId.B03.points.at(-1),byId.B09.points[0]);
+  assert.deepEqual(byId.B08.points.at(-1),byId.B09.points[0]);
+  assert.deepEqual(byId.T01.points.at(-1),byId.B10.points[0]);
+  assert.deepEqual(byId.T02.points.at(-1),byId.B10.points[0]);
+});
+
+test('3D moving skiers mirror 2D positions and interpolate the same edge progress',()=>{
+  const s=new Simulation(map,config,{initialAgents:100});
+  for(let i=0;i<40;i++){
+    s.step(60);
+    for(const id of s.active){const a=s.agents[id],p=agentWorldPosition(s,a);assert.deepEqual(p.slice(0,2),s.position(a));assert.ok(p.every(Number.isFinite));
+      if(a.edge&&a.state!=='QUEUE'){
+        const start=nodes[a.edge.from].elevation_m,end=nodes[a.edge.to].elevation_m;
+        assert.ok(p[2]>=Math.min(start,end)-1e-8&&p[2]<=Math.max(start,end)+1e-8);
+      }
+    }
+  }
+});
+
+function fakeCanvas(){
+  const events=new Map(),calls=[];
+  const ctx=new Proxy({measureText:t=>({width:t.length*6})},{get:(o,k)=>k in o?o[k]:(...args)=>calls.push([k,...args])});
+  return {width:0,height:0,style:{},events,calls,addEventListener:(k,v)=>events.set(k,v),getBoundingClientRect:()=>({left:0,top:0,width:850,height:500}),getContext:()=>ctx,focus:()=>{},setPointerCapture:()=>{}};
+}
+const event=(extra={})=>({clientX:200,clientY:200,pointerId:1,button:0,preventDefault:()=>{},...extra});
+
+test('orbit, pan, wheel, pinch, keyboard and reset change camera only',()=>{
+  const canvas=fakeCanvas(),view=new Mountain3D(canvas,map),home=defaultCamera();
+  const fire=(type,e)=>canvas.events.get(type)({...event(),type,...e});
+  fire('pointerdown',{});fire('pointermove',{clientX:250,clientY:220});fire('pointerup',{clientX:250,clientY:220});assert.notEqual(view.camera.yaw,home.yaw);
+  fire('pointerdown',{shiftKey:true});fire('pointermove',{clientX:230});fire('pointerup',{clientX:230});assert.equal(view.camera.panX,30);
+  fire('wheel',{deltaY:-100});assert.ok(view.camera.zoom>1);
+  const z=view.camera.zoom;fire('pointerdown',{});fire('pointerdown',{pointerId:2,clientX:300});fire('pointermove',{pointerId:2,clientX:350});assert.ok(view.camera.zoom>z);fire('pointerup',{pointerId:2});fire('pointerup',{});
+  fire('keydown',{key:'Home'});assert.deepEqual(view.camera,home);fire('keydown',{key:'ArrowRight'});assert.notEqual(view.camera.yaw,home.yaw);
+  for(let i=0;i<100;i++)fire('wheel',{deltaY:-100});assert.equal(view.camera.zoom,4);
+});
+
+test('drawing and picking share agent IDs and never advance or randomize physics',()=>{
+  const old=globalThis.window;globalThis.window={devicePixelRatio:1};
+  try{
+    const s=new Simulation(map,config,{initialAgents:20});s.step(120);const before=JSON.stringify({summary:s.summary(),agents:s.agentRows()});
+    s.random=()=>{throw new Error('Renderer accessed RNG');};
+    const canvas=fakeCanvas(),view=new Mountain3D(canvas,map);view.draw(s);
+    assert.equal(JSON.stringify({summary:s.summary(),agents:s.agentRows()}),before);
+    assert.ok(canvas.calls.some(c=>c[0]==='arc'));assert.equal(view.routeHits.length,30);
+    const hit=view.hits.find(h=>h.type==='agent');assert.ok(hit);
+    assert.ok(view.pick(hit));assert.ok(view.hits.some(h=>h.type==='node'&&h.id==='W_BASE'));
+    for(const c of [defaultCamera(),{...defaultCamera(),yaw:2,pitch:1.4,zoom:4}])for(const n of map.nodes){const p=projectPoint([n.x,n.y,n.elevation_m],c,850,500);assert.ok(Object.values(p).every(Number.isFinite));}
+  }finally{globalThis.window=old;}
+});
+
+test('repeated-experiments panel and browser batch handlers are absent',()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),app=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');
+  assert.ok(!html.includes('REPEATED EXPERIMENTS'));assert.ok(!html.includes('id="batch-start"'));assert.ok(!app.includes('batchWorker'));
+  assert.ok(html.includes('id="mountain-3d"'));assert.ok(html.includes('data-view="split"'));
+});

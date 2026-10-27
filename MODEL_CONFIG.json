@@ -1,5 +1,5 @@
 {
-  "version": "5.0.0",
+  "version": "5.1.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -68,7 +68,7 @@
     "route_policy": "directed graph shortest feasible base-to-base transit time; use real node/edge connections only",
     "run_choice_policy": "random compatible complete descending itinerary from chosen lift, except specialty lappers follow their assigned specialty",
     "turtle_visual_size_px": 5,
-    "turtle_visualization": "moving dot markers on polyline at interpolated 3D surface altitude"
+    "turtle_visualization": "Shared agents on exact planar centerlines and synchronized schematic 3D edge-height interpolation"
   },
   "decision": {
     "cost_function": "travel_minutes_to_lift + last_observed_queue_wait_minutes + lift_ride_minutes",
@@ -125,7 +125,10 @@
       "play_pause",
       "reset_seed",
       "speed",
-      "run_batch"
+      "view_mode",
+      "camera_reset",
+      "height_scale",
+      "node_labels"
     ],
     "metrics": [
       "queue_count_by_lift",
@@ -136,7 +139,7 @@
       "switch_count_by_class",
       "belief_error"
     ],
-    "graphics": "2D supplied map and exact planar polylines; absent heightfield is not reconstructed"
+    "graphics": "Synchronized exact 2D topology and interactive schematic 3D route skeleton using node elevations and interpolated route heights."
   },
   "provenance": {
     "class_shares": "synthetic assumptions, not measured Vail GPS proportions",

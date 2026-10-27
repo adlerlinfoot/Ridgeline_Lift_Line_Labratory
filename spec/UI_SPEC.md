@@ -1,5 +1,7 @@
 # Interface
 
-Static HTML/CSS/modules, no paid/backend service. Exact planar map, route-following dots, queue circles, class colors and lift cards. Play/pause/reset, seed, speed, infrastructure, opening count, arrival rate and population mode. Settings lock on start; reset to reconfigure. Speed affects playback only.
+Static HTML/CSS/modules, no paid/backend service. One physical Simulation instance drives the flat topology and interactive perspective 3D skeleton, with matching skier IDs, colors, queue counts, timing and selection. Both views/Flat map/3D skeleton buttons change presentation only. Small screens stack both views.
 
-Queue charts, moving-skier inspection with memories/timestamps, state population, CSV/JSON downloads and worker batches. Cancel discards incomplete comparisons. Numeric controls reject invalid ranges. Responsive stacked layout. Synthetic assumptions and formal-analysis limits visible on page.
+3D controls: pointer orbit, wheel/pinch zoom, Shift/right-drag pan, two-finger pan, arrow-key orbit, +/- zoom, Home/reset camera. Adjustable vertical exaggeration and node labels. Hover route/node metadata; click moving skiers to inspect memories and highlight in both views. Node elevations are supplied; interior heights are interpolated along planar route segments, explicitly anchored at junctions. No missing terrain surface is reconstructed.
+
+Existing controls: play/pause/reset, seed, speed, infrastructure, opening count, flow rate and population mode. Settings lock on start; reset to reconfigure. Queue charts, state population and current-run CSV/JSON exports remain. Repeated-experiments panel and browser batch handlers are removed; CLI batch utilities remain.

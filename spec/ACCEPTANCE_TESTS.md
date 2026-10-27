@@ -14,3 +14,5 @@ Run topology and context validators and reference-policy tests before extending 
 - Batch constraints, uncertainty and CSV quoting.
 
 Browser QA: start/pause/resume/reset, inspect agents, change speed, run/cancel batch, inspect exports and narrow layouts. If browser automation is unavailable, report that limit; HTTP/DOM checks do not replace visual checks. Missing heightfield descent and formal mathematical stability are not certified.
+
+3D acceptance: preserve all 20 run polylines and declared elevations; shared junctions have equal 3D coordinates; moving skier x/y match flat view; renderer/camera cannot mutate physics or access its RNG; orbit/pan/zoom/pinch/keyboard/reset work; browser batch panel and handlers are absent. Real browser visual verification remains separate from Canvas/DOM fixtures.
