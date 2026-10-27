@@ -6,4 +6,6 @@ Static HTML/CSS/modules, no paid/backend service. One physical Simulation instan
 
 Existing controls: play/pause/reset, seed, speed, infrastructure, opening count, flow rate and population mode. Settings lock on start; reset to reconfigure. Queue charts, state population and current-run CSV/JSON exports remain. Repeated-experiments panel and browser batch handlers are removed; CLI batch utilities remain.
 
-Latest presentation update: default schematic cone wrap and translucent conical body, plus on-screen gyroscope drag/compass snap/reset. Cone can be unchecked to restore the earlier exact-planar-coordinate skeleton view. Supplied elevations and shared simulation state are unchanged; wrapping is display-only and routes are subdivided for curved rendering. No physical terrain is inferred.
+Latest presentation update: default schematic cone wrap and opaque conical body, plus on-screen gyroscope drag/compass snap/reset. Cone can be unchecked to restore the earlier exact-planar-coordinate skeleton view. Supplied elevations and shared simulation state are unchanged; wrapping is display-only and routes are subdivided for curved rendering. No physical terrain is inferred.
+
+Opaque-cone visibility: only front-facing route portions, skiers, queue markers, node labels and their hover/click targets are rendered. Visibility follows the perspective camera and vertical exaggeration as the mountain rotates. Display names: West peak, East Peak, Aspen peak, Meadow top; graph IDs remain unchanged.

@@ -43,4 +43,6 @@ Root BEHAVIOR_SPEC.md, MODEL_CONFIG.json, MAP_SPEC.md and resort-map.json are ca
 
 Latest user-requested visualization: remove the repeated-experiments browser section. Add interactive synchronized 3D route skeleton using supplied node elevations and interpolated interior heights; this explicitly permits schematic 3D display without inventing a physical terrain field. Preserve planar topology and simulation timing. CLI batch tools are retained.
 
-Latest presentation update: default schematic cone wrap and translucent conical body, plus on-screen gyroscope drag/compass snap/reset. Cone can be unchecked to restore the earlier exact-planar-coordinate skeleton view. Supplied elevations and shared simulation state are unchanged; wrapping is display-only and routes are subdivided for curved rendering. No physical terrain is inferred.
+Latest presentation update: default schematic cone wrap and opaque conical body, plus on-screen gyroscope drag/compass snap/reset. Cone can be unchecked to restore the earlier exact-planar-coordinate skeleton view. Supplied elevations and shared simulation state are unchanged; wrapping is display-only and routes are subdivided for curved rendering. No physical terrain is inferred.
+
+Opaque-cone visibility: only front-facing route portions, skiers, queue markers, node labels and their hover/click targets are rendered. Visibility follows the perspective camera and vertical exaggeration as the mountain rotates. Display names: West peak, East Peak, Aspen peak, Meadow top; graph IDs remain unchanged.

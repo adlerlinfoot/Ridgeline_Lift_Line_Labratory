@@ -89,6 +89,8 @@ Both views share one Simulation instance, clock, seed, IDs, queue counts and sel
 
 ## Cone wrap and gyroscope
 
-The default 3D view wraps the route skeleton around a translucent conical wireframe. Supplied elevations are retained; planar coordinates are mapped to azimuth and radius for display only. Routes are subdivided before wrapping so moving skiers follow the same curved display paths. This is a schematic mounting of the topology, not measured terrain. Uncheck Cone for the previous exact-planar-coordinate 3D view.
+The default 3D view wraps the route skeleton around a opaque conical wireframe. Supplied elevations are retained; planar coordinates are mapped to azimuth and radius for display only. Routes are subdivided before wrapping so moving skiers follow the same curved display paths. This is a schematic mounting of the topology, not measured terrain. Uncheck Cone for the previous exact-planar-coordinate 3D view.
 
 The top-right gyroscope supports pointer dragging to orbit, N/E/S/W clicks to snap azimuth, arrow keys to rotate and double-click/Home to reset. The main viewport retains drag/pan/zoom controls. Camera actions and cone toggling never alter the simulation.
+
+Opaque-cone visibility: only front-facing route portions, skiers, queue markers, node labels and their hover/click targets are rendered. Visibility follows the perspective camera and vertical exaggeration as the mountain rotates. Display names: West peak, East Peak, Aspen peak, Meadow top; graph IDs remain unchanged.

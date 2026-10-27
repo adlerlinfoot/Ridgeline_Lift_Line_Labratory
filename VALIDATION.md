@@ -22,3 +22,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Cone and gyroscope revision
 
 28 automated tests pass, including cone-radius/elevation consistency, route subdivision and gyroscope drag/snap/reset. DOM integration also checks cone toggle and gyroscope Home resetting the camera and matching UI fields. Offline render of the actual cone drawing commands was visually inspected and the initial zoom adjusted to fit the route layout. Full real-browser visual verification remains unavailable. The cone is an explicit display remapping and never changes engine routes, timing or behavior.
+
+## Opaque mountain and label visibility
+
+31 tests pass. Added exact display-name checks, multi-angle tests that far-side nodes/labels/skier pick targets are absent, and horizon clipping checks for route segments. The perspective visibility test accounts for vertical exaggeration and is disabled in the unwrapped view. An offline rendering was inspected to verify opaque fill, hidden rear labels and all requested peak names. No engine behavior changed.

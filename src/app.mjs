@@ -1,5 +1,5 @@
 import {Simulation,csv} from './engine.mjs';
-import {Mountain3D} from './mountain3d.mjs';
+import {Mountain3D,nodeLabel} from './mountain3d.mjs';
 const $=id=>document.getElementById(id);
 const colors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
 const classes={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
@@ -23,8 +23,8 @@ function drawMap(){
   const active=new Set(sim.mountain.scenario.active_run_ids);
   for(const r of map.runs){const color={green:'#68be91',blue:'#65a3d9',black:'#9aaeb8',park:'#e5a15e'}[r.difficulty];const path=svg('polyline',{points:r.polyline.map(p=>p.join(',')).join(' '),fill:'none',stroke:active.has(r.id)?color:'#33464d','stroke-width':r.difficulty==='park'?6:4,'stroke-linejoin':'round',opacity:active.has(r.id)?.9:.45});path.append(svg('title',{},`${r.id} · ${r.name} · ${r.difficulty}${active.has(r.id)?'':' · closed'}`));root.append(path);}
   for(const t of map.transfers)root.append(svg('polyline',{points:t.polyline.map(p=>p.join(',')).join(' '),fill:'none',stroke:'#637c86','stroke-width':3,'stroke-dasharray':'7 7'}));
-  for(const l of map.lifts){const a=sim.mountain.nodes[l.base],b=sim.mountain.nodes[l.top],open=sim.mountain.scenario.active_lifts.includes(l.id);root.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:open?colors[l.id]:'#42565e','stroke-width':7}));for(const n of [a,b])root.append(svg('circle',{cx:n.x,cy:n.y,r:10,fill:'#182d36',stroke:open?colors[l.id]:'#42565e','stroke-width':3}));root.append(svg('text',{x:a.x,y:a.y+43,fill:open?colors[l.id]:'#71858e','font-size':20,'font-family':'system-ui','text-anchor':'middle'},`${l.id} · ${l.name.split(' ')[0]}`));root.append(svg('text',{x:b.x,y:b.y-22,fill:'#a8bec6','font-size':15,'font-family':'system-ui','text-anchor':'middle'},l.top.replace('_',' ')));}
-  for(const n of map.nodes.filter(n=>!n.kind.startsWith('lift'))){root.append(svg('circle',{cx:n.x,cy:n.y,r:5,fill:'#a5b9bf'}));root.append(svg('text',{x:n.x+10,y:n.y-12,fill:'#77929d','font-size':12,'font-family':'system-ui'},n.id.replaceAll('_',' ')));}
+  for(const l of map.lifts){const a=sim.mountain.nodes[l.base],b=sim.mountain.nodes[l.top],open=sim.mountain.scenario.active_lifts.includes(l.id);root.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:open?colors[l.id]:'#42565e','stroke-width':7}));for(const n of [a,b])root.append(svg('circle',{cx:n.x,cy:n.y,r:10,fill:'#182d36',stroke:open?colors[l.id]:'#42565e','stroke-width':3}));root.append(svg('text',{x:a.x,y:a.y+43,fill:open?colors[l.id]:'#71858e','font-size':20,'font-family':'system-ui','text-anchor':'middle'},`${l.id} · ${l.name.split(' ')[0]}`));root.append(svg('text',{x:b.x,y:b.y-22,fill:'#a8bec6','font-size':15,'font-family':'system-ui','text-anchor':'middle'},nodeLabel(l.top)));}
+  for(const n of map.nodes.filter(n=>!n.kind.startsWith('lift'))){root.append(svg('circle',{cx:n.x,cy:n.y,r:5,fill:'#a5b9bf'}));root.append(svg('text',{x:n.x+10,y:n.y-12,fill:'#77929d','font-size':12,'font-family':'system-ui'},nodeLabel(n.id)));}
   $('map-scenario').textContent=sim.mountain.scenario.active_lifts.includes('L4')?'L4 OPEN · 20 RUNS':'L4 CLOSED · 14 RUNS';
 }
 function drawAgents(){

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Simulation} from '../src/engine.mjs';
-import {skeletonRoutes,agentWorldPosition,defaultCamera,projectPoint,Mountain3D,conePoint,coneSurface,coneGeometry,subdividePolyline} from '../src/mountain3d.mjs';
+import {skeletonRoutes,agentWorldPosition,defaultCamera,projectPoint,Mountain3D,conePoint,coneSurface,coneGeometry,subdividePolyline,isConeVisible,visiblePolyline,nodeLabel} from '../src/mountain3d.mjs';
 const map=JSON.parse(readFileSync(new URL('../resort-map.json',import.meta.url)));
 const config=JSON.parse(readFileSync(new URL('../MODEL_CONFIG.json',import.meta.url)));
 const nodes=Object.fromEntries(map.nodes.map(n=>[n.id,n]));
@@ -61,7 +61,7 @@ test('drawing and picking share agent IDs and never advance or randomize physics
     s.random=()=>{throw new Error('Renderer accessed RNG');};
     const canvas=fakeCanvas(),view=new Mountain3D(canvas,map);view.draw(s);
     assert.equal(JSON.stringify({summary:s.summary(),agents:s.agentRows()}),before);
-    assert.ok(canvas.calls.some(c=>c[0]==='arc'));assert.equal(view.routeHits.length,30);
+    assert.ok(canvas.calls.some(c=>c[0]==='arc'));assert.ok(view.routeHits.length>0);
     const hit=view.hits.find(h=>h.type==='agent');assert.ok(hit);
     assert.ok(view.pick(hit));assert.ok(view.hits.some(h=>h.type==='node'&&h.id==='W_BASE'));
     for(const c of [defaultCamera(),{...defaultCamera(),yaw:2,pitch:1.4,zoom:4}])for(const n of map.nodes){const p=projectPoint([n.x,n.y,n.elevation_m],c,850,500);assert.ok(Object.values(p).every(Number.isFinite));}
@@ -86,4 +86,34 @@ test('on-screen gyroscope supports orbit drag, compass snapping and reset',()=>{
   fire('keydown',{key:'Home'});assert.deepEqual(view.camera,home);
   fire('pointerdown',{clientX:425,clientY:5});fire('pointerup',{clientX:425,clientY:5});assert.equal(view.camera.yaw,0);
   fire('dblclick',{});assert.deepEqual(view.camera,home);
+});
+
+
+test('peak display names match requested spelling without changing graph IDs',()=>{
+  assert.equal(nodeLabel('W_TOP'),'West peak');assert.equal(nodeLabel('E_TOP'),'East Peak');
+  assert.equal(nodeLabel('A_TOP'),'Aspen peak');assert.equal(nodeLabel('M_TOP'),'Meadow top');
+});
+test('opaque cone hides far-side nodes, labels, skiers and their pick targets as camera rotates',()=>{
+  const old=globalThis.window;globalThis.window={devicePixelRatio:1};
+  try{
+    const s=new Simulation(map,config,{initialAgents:100});s.step(120);const canvas=fakeCanvas(),view=new Mountain3D(canvas,map);
+    let hidden=0,visible=0;
+    for(const yaw of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
+      view.camera.yaw=yaw;view.camera.pitch=.2;canvas.calls.length=0;view.draw(s);
+      for(const n of map.nodes){const shown=isConeVisible([n.x,n.y,n.elevation_m],view.camera);assert.equal(view.hits.some(h=>h.type==='node'&&h.id===n.id),shown);if(shown)visible++;else{hidden++;assert.ok(!canvas.calls.some(c=>c[0]==='fillText'&&c[1]===nodeLabel(n.id)));}}
+      for(const id of s.active){const a=s.agents[id];if(a.state!=='QUEUE')assert.equal(view.hits.some(h=>h.type==='agent'&&h.id===id),isConeVisible(agentWorldPosition(s,a),view.camera));}
+    }
+    assert.ok(hidden>0&&visible>0);
+    view.camera.cone=false;view.draw(s);assert.equal(view.hits.filter(h=>h.type==='node').length,map.nodes.length);
+  }finally{globalThis.window=old;}
+});
+test('horizon clipping emits only visible route segments and is disabled in unwrapped mode',()=>{
+  const camera={...defaultCamera(),pitch:.12,yaw:0},rows=coneSurface(),ring=rows[0],chunks=visiblePolyline(ring,camera,true);
+  assert.ok(chunks.length>0);assert.ok(chunks.flat().length<ring.length+4);
+  for(const p of chunks.flat()){
+    const r=conePoint([700,480,2330]);assert.ok(r.every(Number.isFinite));
+    // Boundary points are clipped to a numerical approximation of the horizon.
+    const near=[p[0],p[1],p[2]];assert.ok(isConeVisible(near,{...camera,pitch:camera.pitch+.0001},true));
+  }
+  assert.deepEqual(visiblePolyline(ring,{...camera,cone:false},true),[ring]);
 });
