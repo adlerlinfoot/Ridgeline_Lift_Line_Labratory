@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Simulation} from '../src/engine.mjs';
-import {skeletonRoutes,agentWorldPosition,defaultCamera,projectPoint,Mountain3D} from '../src/mountain3d.mjs';
+import {skeletonRoutes,agentWorldPosition,defaultCamera,projectPoint,Mountain3D,conePoint,coneSurface,coneGeometry,subdividePolyline} from '../src/mountain3d.mjs';
 const map=JSON.parse(readFileSync(new URL('../resort-map.json',import.meta.url)));
 const config=JSON.parse(readFileSync(new URL('../MODEL_CONFIG.json',import.meta.url)));
 const nodes=Object.fromEntries(map.nodes.map(n=>[n.id,n]));
@@ -48,7 +48,7 @@ test('orbit, pan, wheel, pinch, keyboard and reset change camera only',()=>{
   const fire=(type,e)=>canvas.events.get(type)({...event(),type,...e});
   fire('pointerdown',{});fire('pointermove',{clientX:250,clientY:220});fire('pointerup',{clientX:250,clientY:220});assert.notEqual(view.camera.yaw,home.yaw);
   fire('pointerdown',{shiftKey:true});fire('pointermove',{clientX:230});fire('pointerup',{clientX:230});assert.equal(view.camera.panX,30);
-  fire('wheel',{deltaY:-100});assert.ok(view.camera.zoom>1);
+  fire('wheel',{deltaY:-100});assert.ok(view.camera.zoom>home.zoom);
   const z=view.camera.zoom;fire('pointerdown',{});fire('pointerdown',{pointerId:2,clientX:300});fire('pointermove',{pointerId:2,clientX:350});assert.ok(view.camera.zoom>z);fire('pointerup',{pointerId:2});fire('pointerup',{});
   fire('keydown',{key:'Home'});assert.deepEqual(view.camera,home);fire('keydown',{key:'ArrowRight'});assert.notEqual(view.camera.yaw,home.yaw);
   for(let i=0;i<100;i++)fire('wheel',{deltaY:-100});assert.equal(view.camera.zoom,4);
@@ -72,4 +72,18 @@ test('repeated-experiments panel and browser batch handlers are absent',()=>{
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8'),app=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');
   assert.ok(!html.includes('REPEATED EXPERIMENTS'));assert.ok(!html.includes('id="batch-start"'));assert.ok(!app.includes('batchWorker'));
   assert.ok(html.includes('id="mountain-3d"'));assert.ok(html.includes('data-view="split"'));
+});
+test('cone wrap keeps elevation and puts routes and skiers on the same conical radius',()=>{
+  const g=coneGeometry;
+  for(const r of skeletonRoutes(map))for(const p of r.points){const q=conePoint(p),u=Math.max(0,Math.min(1,(p[2]-g.base)/(g.top-g.base)));assert.equal(q[2],p[2]);assert.ok(Math.abs(Math.hypot((q[0]-700)*2,(q[1]-480)*2)-(g.capRadius+g.radius*(1-u)))<1e-8);}
+  const surface=coneSurface();assert.equal(surface.length,13);assert.equal(surface[0].length,49);
+  const p=[[0,0,2500],[100,80,2800]],dense=subdividePolyline(p);assert.deepEqual(dense[0],p[0]);assert.deepEqual(dense.at(-1),p[1]);assert.ok(dense.length>10);
+});
+test('on-screen gyroscope supports orbit drag, compass snapping and reset',()=>{
+  const canvas=fakeCanvas(),gyro=fakeCanvas(),view=new Mountain3D(canvas,map,{gyro});
+  const fire=(type,e)=>gyro.events.get(type)({...event(),type,...e});
+  const home=defaultCamera();fire('pointerdown',{});fire('pointermove',{clientX:240,clientY:215});fire('pointerup',{clientX:240,clientY:215});assert.notEqual(view.camera.yaw,home.yaw);assert.notEqual(view.camera.pitch,home.pitch);
+  fire('keydown',{key:'Home'});assert.deepEqual(view.camera,home);
+  fire('pointerdown',{clientX:425,clientY:5});fire('pointerup',{clientX:425,clientY:5});assert.equal(view.camera.yaw,0);
+  fire('dblclick',{});assert.deepEqual(view.camera,home);
 });

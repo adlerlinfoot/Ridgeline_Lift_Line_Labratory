@@ -1,5 +1,5 @@
 {
-  "version": "5.1.0",
+  "version": "5.2.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -128,7 +128,9 @@
       "view_mode",
       "camera_reset",
       "height_scale",
-      "node_labels"
+      "node_labels",
+      "cone_wrap",
+      "orbit_gyroscope"
     ],
     "metrics": [
       "queue_count_by_lift",

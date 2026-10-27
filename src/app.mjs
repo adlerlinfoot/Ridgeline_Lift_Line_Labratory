@@ -65,7 +65,7 @@ function frame(now){
 }
 try{
   [map,config]=await Promise.all(['resort-map.json','MODEL_CONFIG.json'].map(async f=>{const r=await fetch(f);if(!r.ok)throw new Error(`Could not load ${f}`);return r.json();}));
-  view3d=new Mountain3D($('mountain-3d'),map,{onSelect:id=>{selected=id;render();},onHover:text=>{$('three-help').textContent=text;}});
+  view3d=new Mountain3D($('mountain-3d'),map,{gyro:$('orbit-gyro'),onReset:camera=>{$('height-scale').value=camera.vertical;$('height-value').textContent=camera.vertical.toFixed(1)+'×';$('cone-wrap').checked=camera.cone;},onSelect:id=>{selected=id;render();},onHover:text=>{$('three-help').textContent=text;}});
   reset();
   $('play').onclick=()=>{if(sim.done)return;locked=true;running=!running;setSettings();$('play').textContent=running?'Pause':'Resume';};
   $('reset').onclick=reset;document.querySelectorAll('.setting').forEach(e=>e.onchange=()=>{if(!locked)reset();});
@@ -75,8 +75,9 @@ try{
     document.querySelectorAll('button[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
     render();
   };});
-  $('camera-reset').onclick=()=>{view3d.reset();$('height-scale').value=1.5;$('height-value').textContent='1.5×';render();};
+  $('camera-reset').onclick=()=>{view3d.reset();$('height-scale').value=1.5;$('height-value').textContent='1.5×';$('cone-wrap').checked=true;render();};
   $('height-scale').oninput=e=>{view3d.camera.vertical=Number(e.target.value);$('height-value').textContent=Number(e.target.value).toFixed(1)+'×';view3d.draw(sim,selected);};
+  $('cone-wrap').onchange=e=>{view3d.camera.cone=e.target.checked;view3d.draw(sim,selected);};
   $('node-labels').onchange=e=>{view3d.labels=e.target.checked;view3d.draw(sim,selected);};
   $('agents').onclick=e=>{const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)*1400/r.width,y=(e.clientY-r.top)*960/r.height;let best=18,aid=null;for(const p of positions){const d=Math.hypot(p.x-x,p.y-y);if(d<best){best=d;aid=p.id;}}selected=aid;render();};
   $('export-json').onclick=()=>download(`ridgeline-${sim.options.seed}.json`,JSON.stringify(runExport(),null,2),'application/json');

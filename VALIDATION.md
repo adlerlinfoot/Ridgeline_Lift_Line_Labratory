@@ -18,3 +18,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Synchronized 3D visualization revision
 
 26 automated tests pass. Additional checks cover exact planar waypoints/node elevations/junction alignment, 3D agent progress matching flat positions, camera-only interaction, rendering without physics mutation/RNG access, and removal of repeated-experiments browser UI. Updated DOM integration checks exercise all three view modes, height/label controls, reset camera, keyboard orbit, simulation completion and the three remaining exports. An offline SVG recording of actual 3D Canvas draw commands was rendered and visually inspected for route layout and labels. This is not an actual browser screenshot; no browser surface is available for full rendered desktop/mobile verification. No physical terrain surface was inferred.
+
+## Cone and gyroscope revision
+
+28 automated tests pass, including cone-radius/elevation consistency, route subdivision and gyroscope drag/snap/reset. DOM integration also checks cone toggle and gyroscope Home resetting the camera and matching UI fields. Offline render of the actual cone drawing commands was visually inspected and the initial zoom adjusted to fit the route layout. Full real-browser visual verification remains unavailable. The cone is an explicit display remapping and never changes engine routes, timing or behavior.

@@ -86,3 +86,9 @@ The halfway boundary is half the configured operating day (210 of 420 minutes). 
 Both views share one Simulation instance, clock, seed, IDs, queue counts and selection. Drag the 3D view to orbit, wheel to zoom, Shift/right-drag to pan, pinch with two fingers to zoom/pan, or focus it and use arrow keys, +/- and Home. Height adjusts display exaggeration only; Labels toggles node labels. Reset camera restores the initial viewpoint. Click a moving skier in either view to inspect and highlight it in both. Hover routes/nodes for IDs and elevation/length information. On smaller screens the mirrored views stack vertically; choose a single view for more room.
 
 3D x/y are the exact route waypoints. Heights are interpolated between declared node elevations, honoring intermediate junctions such as PARK_MERGE. This is a skeletonized schematic, not a recovered heightfield or a new physical model. Camera actions never advance or randomize simulation state.
+
+## Cone wrap and gyroscope
+
+The default 3D view wraps the route skeleton around a translucent conical wireframe. Supplied elevations are retained; planar coordinates are mapped to azimuth and radius for display only. Routes are subdivided before wrapping so moving skiers follow the same curved display paths. This is a schematic mounting of the topology, not measured terrain. Uncheck Cone for the previous exact-planar-coordinate 3D view.
+
+The top-right gyroscope supports pointer dragging to orbit, N/E/S/W clicks to snap azimuth, arrow keys to rotate and double-click/Home to reset. The main viewport retains drag/pan/zoom controls. Camera actions and cone toggling never alter the simulation.

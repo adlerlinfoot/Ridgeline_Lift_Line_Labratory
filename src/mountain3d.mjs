@@ -41,9 +41,34 @@ export function agentWorldPosition(sim,a) {
   return [x,y,start+(end-start)*f];
 }
 
-export function defaultCamera(){return {yaw:-0.24,pitch:0.62,zoom:1,panX:0,panY:0,vertical:1.5};}
+export const coneGeometry={base:2330,top:3140,radius:1280,capRadius:80};
+export function conePoint(point) {
+  const g=coneGeometry,u=clamp((point[2]-g.base)/(g.top-g.base),0,1);
+  const angle=(point[0]-700)/700*Math.PI*.85+(point[1]-480)/960*.18;
+  const radius=g.capRadius+g.radius*(1-u);
+  return [700+Math.sin(angle)*radius/2,480+Math.cos(angle)*radius/2,point[2]];
+}
+export function coneSurface(rings=12,sides=48) {
+  const g=coneGeometry,rows=[];
+  for(let j=0;j<=rings;j++){
+    const u=j/rings,r=g.capRadius+g.radius*(1-u),row=[];
+    for(let i=0;i<=sides;i++){const a=i/sides*Math.PI*2;row.push([700+Math.sin(a)*r/2,480+Math.cos(a)*r/2,g.base+u*(g.top-g.base)]);}
+    rows.push(row);
+  }
+  return rows;
+}
+export function subdividePolyline(points,step=16) {
+  const out=[points[0]];
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2])/step));
+    for(let k=1;k<=n;k++)out.push(a.map((x,j)=>x+(b[j]-x)*k/n));
+  }
+  return out;
+}
+export function defaultCamera(){return {yaw:-0.24,pitch:0.62,zoom:0.8,panX:0,panY:0,vertical:1.5,cone:true};}
 
 export function projectPoint(point,camera,width,height) {
+  if(camera.cone)point=conePoint(point);
   const x=(point[0]-700)*2,z=(point[1]-480)*2,y=(point[2]-2700)*camera.vertical;
   const rx=Math.cos(camera.yaw)*x+Math.sin(camera.yaw)*z;
   const rz=-Math.sin(camera.yaw)*x+Math.cos(camera.yaw)*z;
@@ -59,12 +84,40 @@ function lineDistance(p,a,b) {
 }
 
 export class Mountain3D {
-  constructor(canvas,map,{onSelect=()=>{},onHover=()=>{}}={}) {
+  constructor(canvas,map,{onSelect=()=>{},onHover=()=>{},onReset=()=>{},gyro=null}={}) {
     this.canvas=canvas;this.map=map;this.routes=skeletonRoutes(map);this.camera=defaultCamera();
-    this.onSelect=onSelect;this.onHover=onHover;this.labels=true;this.hits=[];this.routeHits=[];this.drag=null;this.pointers=new Map();this.hover=null;
-    this.bind();
+    this.coneRoutes=this.routes.map(r=>({...r,points:subdividePolyline(r.points)}));
+    this.onSelect=onSelect;this.onHover=onHover;this.onReset=onReset;this.labels=true;this.hits=[];this.routeHits=[];this.drag=null;this.pointers=new Map();this.hover=null;
+    this.gyro=gyro;this.body=coneSurface();this.bind();if(gyro)this.bindGyro();
   }
-  reset(){this.camera=defaultCamera();this.hover=null;}
+  reset(){this.camera=defaultCamera();this.hover=null;this.onReset(this.camera);}
+  bindGyro() {
+    const el=this.gyro;let drag=null;
+    el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);el.focus({preventScroll:true});drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false};e.preventDefault();});
+    el.addEventListener('pointermove',e=>{if(!drag)return;this.camera.yaw+=(e.clientX-drag.x)*.018;this.camera.pitch=clamp(this.camera.pitch+(e.clientY-drag.y)*.012,.08,1.5);drag.moved ||= Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>3;drag.x=e.clientX;drag.y=e.clientY;});
+    el.addEventListener('pointerup',e=>{if(drag&&!drag.moved){const r=el.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;if(Math.hypot(x,y)>r.width*.26)this.camera.yaw=Math.round(Math.atan2(x,-y)/(Math.PI/2))*Math.PI/2;}drag=null;});
+    for(const type of ['pointercancel','lostpointercapture'])el.addEventListener(type,()=>{drag=null;});
+    el.addEventListener('dblclick',()=>this.reset());
+    el.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')this.camera.yaw-=.1;else if(e.key==='ArrowRight')this.camera.yaw+=.1;else if(e.key==='ArrowUp')this.camera.pitch=clamp(this.camera.pitch-.08,.08,1.5);else if(e.key==='ArrowDown')this.camera.pitch=clamp(this.camera.pitch+.08,.08,1.5);else if(e.key==='Home')this.reset();else return;e.preventDefault();});
+  }
+  drawGyro() {
+    const el=this.gyro;if(!el)return;
+    const c=el.getContext('2d'),r=el.getBoundingClientRect();if(!r.width)return;
+    const dpr=Math.min(window.devicePixelRatio||1,2),w=r.width,h=r.height;
+    if(el.width!==Math.round(w*dpr)||el.height!==Math.round(h*dpr)){el.width=Math.round(w*dpr);el.height=Math.round(h*dpr);}
+    c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+    const x=w/2,y=h/2-3,rad=w*.34;
+    c.fillStyle='#0b1c26ee';c.beginPath();c.arc(x,y,rad+8,0,Math.PI*2);c.fill();
+    c.strokeStyle='#63858f';c.lineWidth=1;
+    c.beginPath();c.ellipse(x,y,rad,rad*.4,this.camera.yaw,0,Math.PI*2);c.stroke();
+    c.beginPath();c.ellipse(x,y,rad*.45,rad,-this.camera.yaw,0,Math.PI*2);c.stroke();
+    c.beginPath();c.arc(x,y,rad,0,Math.PI*2);c.stroke();
+    const a=this.camera.yaw,p=this.camera.pitch,axes=[['X',Math.cos(a),Math.sin(p)*Math.sin(a),'#ff777b'],['Y',Math.sin(a),-Math.sin(p)*Math.cos(a),'#7bceff'],['Z',0,-Math.cos(p),'#91e3b1']];
+    c.font='bold 9px system-ui';c.textAlign='center';c.textBaseline='middle';
+    for(const [label,dx,dy,color] of axes){const xx=x+dx*rad*.7,yy=y+dy*rad*.7;c.strokeStyle=color;c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.stroke();c.fillStyle=color;c.fillText(label,xx+dx*6,yy+dy*6);}
+    c.fillStyle='#bdd4dc';c.font='8px system-ui';for(const [label,dx,dy] of [['N',0,-1],['E',1,0],['S',0,1],['W',-1,0]])c.fillText(label,x+dx*(rad+15),y+dy*(rad+15));
+    c.fillStyle='#98b7c0';c.font='8px system-ui';c.fillText('DRAG TO ORBIT',x,h-3);
+  }
   bind() {
     const el=this.canvas;
     const local=e=>{const r=el.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
@@ -129,13 +182,22 @@ export class Mountain3D {
     if(el.width!==Math.round(width*dpr)||el.height!==Math.round(height*dpr)){el.width=Math.round(width*dpr);el.height=Math.round(height*dpr);}
     const c=el.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,width,height);c.fillStyle='#0e2029';c.fillRect(0,0,width,height);
     const project=p=>projectPoint(p,this.camera,width,height);
+    const raw=p=>projectPoint(p,{...this.camera,cone:false},width,height);
     const trace=(points,color,lineWidth=1,dash=[])=>{c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.strokeStyle=color;c.lineWidth=lineWidth;c.setLineDash(dash);c.stroke();c.setLineDash([]);};
-    for(let x=0;x<=1400;x+=200)trace([project([x,0,2330]),project([x,960,2330])],'#223943');
-    for(let y=0;y<=960;y+=160)trace([project([0,y,2330]),project([1400,y,2330])],'#223943');
+    for(let x=0;x<=1400;x+=200)trace([raw([x,0,2330]),raw([x,960,2330])],'#223943');
+    for(let y=0;y<=960;y+=160)trace([raw([0,y,2330]),raw([1400,y,2330])],'#223943');
+    if(this.camera.cone){
+      const rows=this.body.map(row=>row.map(raw)),faces=[];
+      for(let j=1;j<rows.length;j++)for(let i=1;i<rows[j].length;i++){const points=[rows[j-1][i-1],rows[j-1][i],rows[j][i],rows[j][i-1]];faces.push({points,depth:points.reduce((s,p)=>s+p.depth,0)/4});}
+      faces.sort((a,b)=>a.depth-b.depth);
+      for(const f of faces){c.beginPath();f.points.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.closePath();c.fillStyle='#244d5720';c.fill();}
+      for(const row of rows)trace(row,'#426d7755',.65);
+      for(let i=0;i<rows[0].length-1;i+=3)trace(rows.map(row=>row[i]),'#426d7755',.65);
+    }
     // Datum guides show elevation without inventing a mountain surface.
-    for(const n of this.map.nodes)if(n.kind==='lift_top')trace([project([n.x,n.y,2330]),project([n.x,n.y,n.elevation_m])],'#39505b',1,[3,5]);
+    if(!this.camera.cone)for(const n of this.map.nodes)if(n.kind==='lift_top')trace([project([n.x,n.y,2330]),project([n.x,n.y,n.elevation_m])],'#39505b',1,[3,5]);
     const activeRuns=new Set(sim.mountain.scenario.active_run_ids),activeLifts=new Set(sim.mountain.scenario.active_lifts);
-    const routes=this.routes.map(r=>({...r,screen:r.points.map(project)})).sort((a,b)=>a.screen.reduce((s,p)=>s+p.depth,0)/a.screen.length-b.screen.reduce((s,p)=>s+p.depth,0)/b.screen.length);
+    const routes=(this.camera.cone?this.coneRoutes:this.routes).map(r=>({...r,screen:r.points.map(project)})).sort((a,b)=>a.screen.reduce((s,p)=>s+p.depth,0)/a.screen.length-b.screen.reduce((s,p)=>s+p.depth,0)/b.screen.length);
     this.routeHits=[];
     for(const r of routes){
       const active=r.kind==='run'?activeRuns.has(r.id):r.kind==='lift'?activeLifts.has(r.id):true;
@@ -154,7 +216,8 @@ export class Mountain3D {
       if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:n.id.replaceAll('_',' ');c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,p.y+17,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,p.y+24);}
       this.hits.push({...p,type:'node',id:n.id,text:`${lift?lift.id+' · ':''}${n.id.replaceAll('_',' ')} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
     }
-    c.textAlign='left';c.fillStyle='#7898a5';c.font='10px system-ui';c.fillText('NODE ELEVATIONS + INTERPOLATED ROUTE HEIGHTS',12,height-15);
+    c.textAlign='left';c.fillStyle='#7898a5';c.font='10px system-ui';c.fillText(this.camera.cone?'SCHEMATIC CONE WRAP · SHARED SIMULATION':'NODE ELEVATIONS + INTERPOLATED ROUTE HEIGHTS',12,height-15);
     if(this.hover){c.fillStyle='#e0eee8';c.fillText(this.hover.text.slice(0,Math.floor(width/6.5)),12,20);}
+    this.drawGyro();
   }
 }
