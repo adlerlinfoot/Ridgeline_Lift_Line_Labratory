@@ -4,7 +4,7 @@ from pathlib import Path
 p = Path(__file__).resolve().parents[1]
 d = json.loads((p/'resort-map.json').read_text(encoding='utf-8'))
 nodes = {n['id']: n for n in d['nodes']}
-assert len(nodes)==12 and len(d['runs'])==20 and len(d['lifts'])==4
+assert len(nodes)==13 and len(d['runs'])==20 and len(d['lifts'])==4
 assert len({r['id'] for r in d['runs']})==20
 for e in d['runs']+d['transfers']:
     a,b=e.get('start_node',e.get('from')),e.get('end_node',e.get('to'))
@@ -24,8 +24,10 @@ for name,s in d['scenarios'].items():
         chain=[e['start_node']]+[j['node_id'] for j in sorted(e.get('junction_nodes',[]),key=lambda j:j['polyline_index'])]+[e['end_node']]
         for a,b in zip(chain,chain[1:]):graph[a].append(b)
     for e in d['transfers']:
-        graph[e['from']].append(e['to'])
-        if e['bidirectional']:graph[e['to']].append(e['from'])
+        chain=[e['from']]+[j['node_id'] for j in sorted(e.get('junction_nodes',[]),key=lambda j:j['polyline_index'])]+[e['to']]
+        for a,b in zip(chain,chain[1:]):
+            graph[a].append(b)
+            if e['bidirectional']:graph[b].append(a)
     bases={l['base'] for l in d['lifts'] if l['id'] in s['active_lifts']}
     for r in d['runs']:
         if r['id'] not in active:continue

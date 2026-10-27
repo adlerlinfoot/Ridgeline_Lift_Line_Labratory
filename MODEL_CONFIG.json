@@ -1,5 +1,5 @@
 {
-  "version": "5.3.0",
+  "version": "6.0.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -55,9 +55,10 @@
     "arrival_rate_ui_min": 0,
     "arrival_rate_ui_max": 12,
     "arrival_rate_ui_step": 0.25,
-    "spawn_location_rule": "Choose among physically admissible active lift bases for the assigned skier class/subtype; seeded random. Do not spawn an agent onto an inaccessible summit. Observe every active queue upon spawning.",
+    "spawn_location_rule": "Every opening and later-arrival skier spawns at Main Lodge, the explicit midpoint junction on T04 between M_BASE and A_BASE. Reach admissible lifts via timed valley transfers; no direct queue placement.",
     "departure_rule": "Arrival mode: Poisson arrivals in first half; equal-rate Poisson departure selections in second half, uniformly from active skiers not already selected. Selected skiers finish their current committed lap; in base transit exit at next base. No random stay-based exits. Closing overrides queues.",
-    "flow_switch_fraction": 0.5
+    "flow_switch_fraction": 0.5,
+    "spawn_node": "LODGE"
   },
   "movement": {
     "run_meters_per_second": 8.0,

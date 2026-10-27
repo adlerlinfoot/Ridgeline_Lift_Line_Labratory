@@ -10,4 +10,6 @@ assert c['population']['lapper_race_home_lift_weights']=={'L1':1}
 assert 'lift_ride_minutes' in c['decision']['cost_function']
 assert set(c['scenarios'])==set(d['scenarios'])
 assert d['scenarios']['four_lift_capacity_control']['vacationer_lifts']==['L3']
+assert c['spawning']['spawn_node']=='LODGE'
+assert any(n['id']=='LODGE' for n in d['nodes'])
 print('PASS: current user decisions and context/config references.')

@@ -107,6 +107,14 @@
       "y": 778,
       "elevation_m": 2452.0,
       "kind": "race_finish"
+    },
+    {
+      "id": "LODGE",
+      "name": "Main Lodge",
+      "x": 721.7090830479773,
+      "y": 900.1934557583121,
+      "elevation_m": 2378.4,
+      "kind": "base_lodge"
     }
   ],
   "lifts": [
@@ -1117,12 +1125,22 @@
           902
         ],
         [
+          721.7090830479773,
+          900.1934557583121
+        ],
+        [
           885,
           875
         ]
       ],
       "centerline_length_m": 660.9,
-      "elevation_delta_m": -4.0
+      "elevation_delta_m": -4.0,
+      "junction_nodes": [
+        {
+          "node_id": "LODGE",
+          "polyline_index": 2
+        }
+      ]
     },
     {
       "id": "T05",
@@ -1363,5 +1381,6 @@
     "black": "#202e3c",
     "park": "#ff7b1c",
     "lift": "#bc294b"
-  }
+  },
+  "spawn_node": "LODGE"
 }

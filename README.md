@@ -24,7 +24,7 @@ Choose settings before starting; Reset unlocks them. Speed affects playback only
 
 ## Confirmed behavior
 
-- Both modes start with a 650-skier opening rush, uniformly placed among each skier's admissible bases. All observe zero queues simultaneously, choose destinations, then enter queues in seeded-random admission order.
+- Both modes start with a 650-skier opening rush, all spawned at Main Lodge between L3 and L4. All observe zero queues simultaneously, choose admissible destinations using seeded tie-breaking, then walk the valley paths before joining queues.
 - **Fixed population:** no new arrivals or personal departures; everyone circulates until closing. **Arrival mode:** opening rush plus Poisson arrivals until minute 210 (default 3/minute), then equal-rate Poisson selections for departures from the existing active pool. No further afternoon arrivals or random stay-based departures. Incoming class probabilities are 25%/35%/15%/25%, not exact finite-sample quotas.
 - Destination minimizes feasible valley transfer minutes + personally remembered queue count/capacity + lift ride minutes. Ties are uniformly random among equal minima. Current-base memory refreshes before choice; remote memory refreshes only on physical visits. Committed arrivals cannot reroute.
 - Main classes: all-mountain 25%, vacationer 35%, lapper 15%, mixed 25%. Lapper subtype weights **10:2:5 conditional on being a lapper**. Park specialists can choose L1/L2; race specialists always use L1/T01/B10/T06; other specialists repeat one assigned full run.
@@ -94,3 +94,7 @@ The default 3D view wraps the route skeleton around a opaque conical wireframe. 
 The top-right gyroscope supports pointer dragging to orbit, N/E/S/W clicks to snap azimuth, arrow keys to rotate and double-click/Home to reset. The main viewport retains drag/pan/zoom controls. Camera actions and cone toggling never alter the simulation.
 
 Opaque-cone visibility: only front-facing route portions, skiers, queue markers, node labels and their hover/click targets are rendered. Visibility follows the perspective camera and vertical exaggeration as the mountain rotates. Display names: West peak, East Peak, Aspen peak, Meadow top; graph IDs remain unchanged.
+
+## Main Lodge spawn
+
+Every opening and later-arrival skier starts at Main Lodge (LODGE), halfway along T04 between Meadow and Aspen bases. T04 is split internally at that explicit junction; its geometry and total length are preserved. All skiers, including dedicated lappers, walk from the lodge to their admissible lift. These minutes count as base transit. Lodge icons appear in both views; in cone mode the lodge respects mountain occlusion. Spawn node is included in skier exports. Departure behavior is unchanged; returning to the lodge is not required.

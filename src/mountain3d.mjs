@@ -5,7 +5,7 @@ const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 const liftColors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
 const classColors={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const trailColors={green:'#68be91',blue:'#65a3d9',black:'#afc3ce',park:'#e5a15e'};
-export const nodeLabel=id=>({W_TOP:'West peak',E_TOP:'East Peak',A_TOP:'Aspen peak',M_TOP:'Meadow top'})[id]??id.replaceAll('_',' ');
+export const nodeLabel=id=>({W_TOP:'West peak',E_TOP:'East Peak',A_TOP:'Aspen peak',M_TOP:'Meadow top',LODGE:'Main Lodge'})[id]??id.replaceAll('_',' ');
 
 export function elevatedPolyline(points,from,to,nodes) {
   const lengths=[0];
@@ -243,8 +243,8 @@ export class Mountain3D {
       const p=project([n.x,n.y,n.elevation_m]),lift=this.map.lifts.find(l=>l.base===n.id),color=lift?liftColors[lift.id]:'#a0bdc8';
       if(lift&&activeLifts.has(lift.id)){
         c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fillStyle='#0a1822ee';c.fill();c.strokeStyle=color;c.lineWidth=1.5;c.stroke();c.fillStyle='#f1f6f3';c.font='600 11px system-ui';c.fillText(sim.queueSize(lift.id),p.x,p.y);c.font='10px system-ui';
-      }else{c.beginPath();c.arc(p.x,p.y,3.5,0,Math.PI*2);c.fillStyle=color;c.fill();}
-      if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:nodeLabel(n.id);c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,p.y+17,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,p.y+24);}
+      }else if(n.kind==='base_lodge'){c.fillStyle='#e7d7ad';c.fillRect(p.x-6,p.y-3,12,10);c.beginPath();c.moveTo(p.x-9,p.y-3);c.lineTo(p.x,p.y-11);c.lineTo(p.x+9,p.y-3);c.closePath();c.fill();}else{c.beginPath();c.arc(p.x,p.y,3.5,0,Math.PI*2);c.fillStyle=color;c.fill();}
+      if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:nodeLabel(n.id),labelY=p.y+(n.kind==='base_lodge'?-24:24);c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,labelY-7,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,labelY);}
       this.hits.push({...p,type:'node',id:n.id,text:`${lift?lift.id+' · ':''}${nodeLabel(n.id)} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
     }
     c.textAlign='left';c.fillStyle='#7898a5';c.font='10px system-ui';c.fillText(this.camera.cone?'SCHEMATIC CONE WRAP · SHARED SIMULATION':'NODE ELEVATIONS + INTERPOLATED ROUTE HEIGHTS',12,height-15);

@@ -78,3 +78,5 @@ No endpoint may strand an agent: if an active expert path ends at M_JOIN or PARK
 ## 7. Validation and regeneration
 
 Run `python build_map.py` to regenerate the JSON/heightfield/SVG/HTML source and `python validate_map.py` to check run counts, height descent, park merge, expert join connectivity, inactive/active scenarios, and baseline no-stranding. Raster PNGs may be regenerated with `cairosvg` from the produced SVG. The supplied ZIP already includes regenerated PNGs and SVGs.
+
+Latest user-confirmed spawn rule supersedes random base placement: all opening and later-arrival skiers spawn at Main Lodge (LODGE), the explicit midpoint junction on T04 between M_BASE/L3 and A_BASE/L4. Split T04 internally in both directions without changing its full path length. Travel from lodge to admissible lifts consumes base-transit time; no direct initial queue placement. Initial queue memories remain simultaneously zero. Lodge is drawn in flat and 3D views with the existing occlusion rule. Departures still end at safe bases, without a required lodge return.

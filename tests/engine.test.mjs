@@ -7,6 +7,7 @@ const map=JSON.parse(readFileSync(new URL('../resort-map.json',import.meta.url))
 const config=JSON.parse(readFileSync(new URL('../MODEL_CONFIG.json',import.meta.url)));
 const clone=x=>structuredClone(x);
 function advance(s,t){while(s.t<t&&!s.done)s.step(Math.min(60,t-s.t));}
+function atBase(c){c=clone(c);c.spawning.spawn_node='M_BASE';return c;}
 function only(cls){const c=clone(config);c.population.main_class_weights={[cls]:1};return c;}
 
 test('all six full-day configurations conserve population/time/queues at every minute',()=>{
@@ -24,11 +25,12 @@ test('seed and physics are independent of frame/step partition',()=>{
   assert.deepEqual(a.summary(),b.summary());assert.deepEqual(a.samples,b.samples);assert.deepEqual(a.agentRows(),b.agentRows());
   const c=new Simulation(map,config,{initialAgents:90,dayMinutes:35,seed:7});c.run();assert.notDeepEqual(a.agentRows(),c.agentRows());
 });
-test('opening memories are simultaneously zero; queues reflect independent class-admissible placements',()=>{
-  const s=new Simulation(map,config);
-  for(const a of s.agents){assert.ok(Object.values(a.memory).every(x=>x===0));assert.ok(s.mountain.candidates(a).includes(s.mountain.baseLift[a.node]));}
-  assert.equal(Object.keys(s.queues).reduce((n,id)=>n+s.queueSize(id),0),650);
-  assert.equal(s.queues.L4.joined,0);
+test('all opening skiers start at Main Lodge with zero memories and timed admissible transfers',()=>{
+  for(const scenario of Object.keys(map.scenarios)){
+    const s=new Simulation(map,config,{scenario}),lodge=s.mountain.nodes.LODGE;
+    for(const a of s.agents){assert.ok(Object.values(a.memory).every(x=>x===0));assert.equal(a.node,'LODGE');assert.equal(a.spawnNode,'LODGE');assert.equal(a.state,'BASE_TRANSIT');assert.ok(s.mountain.candidates(a).includes(a.destination));assert.deepEqual(s.position(a),[lodge.x,lodge.y]);assert.ok(a.edge.seconds>0);}
+    assert.equal(Object.keys(s.queues).reduce((n,id)=>n+s.queueSize(id),0),0);
+  }
 });
 test('remote queues remain hidden; physical arrival refreshes without rerouting',()=>{
   const s=new Simulation(map,config,{initialAgents:30});const a=s.agents.find(a=>a.class==='all_mountain');
@@ -39,7 +41,7 @@ test('remote queues remain hidden; physical arrival refreshes without rerouting'
   const eta=x.route.reduce((n,e)=>n+e.seconds,0);advance(z,eta);assert.equal(x.destination,'L2');assert.equal(x.state,'QUEUE');assert.equal(x.memory.L2,0);assert.equal(x.node,'E_BASE');
 });
 test('FIFO boarding respects service spacing, misses empty slots, and has no closing-time boarding',()=>{
-  const c=only('vacationer');const s=new Simulation(map,c,{initialAgents:10,dayMinutes:1});const order=s.queues.L3.ids.slice();
+  const c=atBase(only('vacationer'));const s=new Simulation(map,c,{initialAgents:10,dayMinutes:1});const order=s.queues.L3.ids.slice();
   s.step(6);assert.equal(s.agents[order[0]].state,'LIFT_RIDE');assert.equal(s.agents[order[1]].state,'QUEUE');
   s.step(6);assert.equal(s.agents[order[1]].state,'LIFT_RIDE');assert.equal(s.agents[order[2]].state,'QUEUE');
   const q=new Simulation(map,c,{initialAgents:100,dayMinutes:1});advance(q,60);assert.equal(q.queues.L3.boarded,9);assert.equal(q.queues.L3.closingExits,91);assert.equal(q.summary().perLift.L3.meanQueue,95.5);assert.ok(Math.abs(q.summary().perLift.L3.queueStandardDeviation-Math.sqrt(8.25))<1e-9);q.run();q.assertInvariants();
@@ -65,7 +67,7 @@ test('mixed preferences freeze at threshold using prior completed waits and neve
   advance(s,240);assert.deepEqual(a.preferred,['L1']);a.waits.L2={total:0,count:1};s.chooseLift(a);assert.deepEqual(a.preferred,['L1']);
 });
 test('requested departures cannot abandon a queue; closing still removes it',()=>{
-  const c=only('vacationer');const s=new Simulation(map,c,{initialAgents:100,mode:'arrival',arrivalRate:0,dayMinutes:2});
+  const c=atBase(only('vacationer'));const s=new Simulation(map,c,{initialAgents:100,mode:'arrival',arrivalRate:0,dayMinutes:2});
   for(const a of s.agents)a.departureRequestedAt=0;
   advance(s,10);assert.equal(s.agents.filter(a=>a.state==='EXITED').length,0);assert.equal(s.queueSize('L3'),99);
   advance(s,120);assert.equal(s.queues.L3.boarded,19);assert.equal(s.queues.L3.closingExits,81);s.run();s.assertInvariants();
@@ -98,7 +100,7 @@ test('arrival flow reverses at halfway, selecting unique existing skiers for saf
   const fixed=new Simulation(map,config,{mode:'fixed',arrivalRate:12});assert.equal(fixed.events.a.filter(e=>e.kind==='departure'||e.kind==='spawn').length,0);
 });
 test('departure requested on a descent exits only when its full itinerary completes',()=>{
-  const s=new Simulation(map,only('vacationer'),{mode:'arrival',arrivalRate:0,initialAgents:1});
+  const s=new Simulation(map,atBase(only('vacationer')),{mode:'arrival',arrivalRate:0,initialAgents:1});
   advance(s,280);const a=s.agents[0];assert.equal(a.state,'SKI_RUN');s.selectDeparture(0);const end=a.edgeEnd;
   advance(s,end-0.1);assert.equal(a.state,'SKI_RUN');advance(s,end);assert.equal(a.state,'EXITED');assert.equal(a.laps,1);s.assertInvariants();
 });
@@ -109,4 +111,15 @@ test('morning arrivals follow the 25/35/15/25 class probabilities',()=>{
   const counts={all_mountain:0,vacationer:0,lapper:0,mixed:0};let n=0;
   for(let seed=0;seed<30;seed++){const s=new Simulation(map,config,{mode:'arrival',initialAgents:0,seed});for(const e of s.events.a)if(e.kind==='spawn'){counts[e.data.class]++;n++;}}
   for(const [cls,p] of Object.entries({all_mountain:.25,vacationer:.35,lapper:.15,mixed:.25}))assert.ok(Math.abs(counts[cls]/n-p)<.02,cls);
+});
+
+test('lodge splits T04 without adding distance and later arrivals also start there',()=>{
+  const s=new Simulation(map,config,{initialAgents:0,mode:'arrival'}),m=s.mountain,lodge=m.nodes.LODGE;
+  const total=m.transfer('M_BASE','A_BASE',{class:'vacationer'}),west=m.transfer('LODGE','M_BASE',{class:'vacationer'}),east=m.transfer('LODGE','A_BASE',{class:'vacationer'});
+  const seconds=p=>p.reduce((n,e)=>n+e.seconds,0);
+  assert.equal(total.length,2);assert.ok(Math.abs(seconds(west)-seconds(east))<1e-8);
+  assert.ok(Math.abs(seconds(total)-seconds(west)-seconds(east))<1e-8);
+  for(const id of m.scenario.active_lifts)assert.ok(m.transfer('LODGE',m.lifts[id].base,{class:'all_mountain'}));
+  advance(s,1200);const a=s.createAgent({class:'vacationer',subtype:'park',runU:0,spawnU:.99});assert.equal(a.node,'LODGE');assert.deepEqual(s.position(a),[lodge.x,lodge.y]);s.commit(a,s.chooseLift(a));
+  s.run();assert.ok(s.agents.every(a=>a.spawnNode==='LODGE'));s.assertInvariants();
 });

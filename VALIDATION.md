@@ -26,3 +26,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Opaque mountain and label visibility
 
 31 tests pass. Added exact display-name checks, multi-angle tests that far-side nodes/labels/skier pick targets are absent, and horizon clipping checks for route segments. The perspective visibility test accounts for vertical exaggeration and is disabled in the unwrapped view. An offline rendering was inspected to verify opaque fill, hidden rear labels and all requested peak names. No engine behavior changed.
+
+## Main Lodge spawn revision
+
+32 automated tests pass. Opening/later arrivals are verified at LODGE, with zero opening queues and timed class-admissible transfers. T04 split segments preserve full path length and equal lodge-to-L3/L4 distance. All six scenario/population full-day invariants remain valid. Queue-service unit fixtures explicitly start agents at a lift to isolate service timing; production config uses lodge-only spawning.
