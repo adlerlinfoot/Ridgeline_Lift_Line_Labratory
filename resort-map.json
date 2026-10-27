@@ -1,0 +1,1367 @@
+{
+  "schema_version": "1.0.0",
+  "name": "Ridgeline — Synthetic Ski Resort",
+  "synthetic": true,
+  "intent": "Directed topology and geometric rendering reference for a skier ABM; artwork is not real terrain.",
+  "coordinate_system": {
+    "x": "screen-right/east",
+    "y": "screen-down/south",
+    "z": "elevation meters",
+    "origin": "top-left",
+    "width_px": 1400,
+    "height_px": 960,
+    "meters_per_pixel_xy": 2.0,
+    "distance_policy": "route distance is summed along polyline segments, never point-to-point teleportation"
+  },
+  "terrain": {
+    "heightmap_image": "terrain-heightmap-16bit.png",
+    "heightmap_encoding": "uint16 elevation meters (rounded)",
+    "height_grid": "terrain-grid.json",
+    "shaded_relief": "terrain-relief.png",
+    "mesh_rule": "Sample heights using bilinear interpolation on terrain-grid.json; raise dot-turtles a small z-offset.",
+    "z_min_m": 2310.8,
+    "z_max_m": 3141.0,
+    "grid_smoothness": "smooth height field; no cliffs or jumps"
+  },
+  "nodes": [
+    {
+      "id": "W_TOP",
+      "x": 390,
+      "y": 165,
+      "elevation_m": 3087.9,
+      "kind": "lift_top"
+    },
+    {
+      "id": "W_BASE",
+      "x": 205,
+      "y": 830,
+      "elevation_m": 2411.4,
+      "kind": "lift_base"
+    },
+    {
+      "id": "E_TOP",
+      "x": 1010,
+      "y": 185,
+      "elevation_m": 3063.0,
+      "kind": "lift_top"
+    },
+    {
+      "id": "E_BASE",
+      "x": 1205,
+      "y": 835,
+      "elevation_m": 2407.5,
+      "kind": "lift_base"
+    },
+    {
+      "id": "M_TOP",
+      "x": 555,
+      "y": 515,
+      "elevation_m": 2680.2,
+      "kind": "lift_top"
+    },
+    {
+      "id": "M_BASE",
+      "x": 560,
+      "y": 870,
+      "elevation_m": 2380.4,
+      "kind": "lift_base"
+    },
+    {
+      "id": "A_TOP",
+      "x": 868,
+      "y": 530,
+      "elevation_m": 2671.6,
+      "kind": "lift_top"
+    },
+    {
+      "id": "A_BASE",
+      "x": 885,
+      "y": 875,
+      "elevation_m": 2376.4,
+      "kind": "lift_base"
+    },
+    {
+      "id": "M_JOIN",
+      "x": 545,
+      "y": 410,
+      "elevation_m": 2784.7,
+      "kind": "run_junction"
+    },
+    {
+      "id": "PARK_MERGE",
+      "x": 260,
+      "y": 500,
+      "elevation_m": 2674.9,
+      "kind": "run_junction"
+    },
+    {
+      "id": "RACE_GATE",
+      "x": 105,
+      "y": 430,
+      "elevation_m": 2730.6,
+      "kind": "race_gate"
+    },
+    {
+      "id": "RACE_FINISH",
+      "x": 85,
+      "y": 778,
+      "elevation_m": 2452.0,
+      "kind": "race_finish"
+    }
+  ],
+  "lifts": [
+    {
+      "id": "L1",
+      "name": "West Summit Express",
+      "zone": "upper_west",
+      "base": "W_BASE",
+      "top": "W_TOP",
+      "capacity_skiers_per_hour": 1800,
+      "ride_minutes": 7.0,
+      "initially_operational": true,
+      "terrain": [
+        "black",
+        "park"
+      ],
+      "centerline_length_m": 1380.5
+    },
+    {
+      "id": "L2",
+      "name": "East Ridge Express",
+      "zone": "upper_east",
+      "base": "E_BASE",
+      "top": "E_TOP",
+      "capacity_skiers_per_hour": 1800,
+      "ride_minutes": 7.0,
+      "initially_operational": true,
+      "terrain": [
+        "black",
+        "park"
+      ],
+      "centerline_length_m": 1357.2
+    },
+    {
+      "id": "L3",
+      "name": "Meadow Chair",
+      "zone": "lower_west",
+      "base": "M_BASE",
+      "top": "M_TOP",
+      "capacity_skiers_per_hour": 1200,
+      "ride_minutes": 4.5,
+      "initially_operational": true,
+      "terrain": [
+        "green",
+        "blue"
+      ],
+      "centerline_length_m": 710.1
+    },
+    {
+      "id": "L4",
+      "name": "Aspen Chair",
+      "zone": "lower_east",
+      "base": "A_BASE",
+      "top": "A_TOP",
+      "capacity_skiers_per_hour": 1200,
+      "ride_minutes": 4.5,
+      "initially_operational": false,
+      "terrain": [
+        "green",
+        "blue"
+      ],
+      "centerline_length_m": 690.8
+    }
+  ],
+  "runs": [
+    {
+      "id": "B01",
+      "name": "North Face",
+      "difficulty": "black",
+      "subtype": "standard",
+      "primary_lift": "L1",
+      "accessible_from_lifts": [
+        "L1"
+      ],
+      "start_node": "W_TOP",
+      "end_node": "W_BASE",
+      "polyline": [
+        [
+          390,
+          165
+        ],
+        [
+          342,
+          260
+        ],
+        [
+          300,
+          372
+        ],
+        [
+          260,
+          500
+        ],
+        [
+          190,
+          630
+        ],
+        [
+          160,
+          725
+        ],
+        [
+          205,
+          830
+        ]
+      ],
+      "width_m": 28,
+      "junction_nodes": [
+        {
+          "node_id": "PARK_MERGE",
+          "polyline_index": 3
+        }
+      ],
+      "centerline_length_m": 1443.3,
+      "start_elevation_m": 3087.9,
+      "end_elevation_m": 2411.4,
+      "vertical_drop_m": 676.5,
+      "max_segment_uphill_m": -74.31
+    },
+    {
+      "id": "B02",
+      "name": "Granite Cut",
+      "difficulty": "black",
+      "subtype": "standard",
+      "primary_lift": "L1",
+      "accessible_from_lifts": [
+        "L1"
+      ],
+      "start_node": "W_TOP",
+      "end_node": "W_BASE",
+      "polyline": [
+        [
+          390,
+          165
+        ],
+        [
+          412,
+          280
+        ],
+        [
+          392,
+          425
+        ],
+        [
+          345,
+          570
+        ],
+        [
+          275,
+          710
+        ],
+        [
+          205,
+          830
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 1422.7,
+      "start_elevation_m": 3087.9,
+      "end_elevation_m": 2411.4,
+      "vertical_drop_m": 676.5,
+      "max_segment_uphill_m": -93.65
+    },
+    {
+      "id": "B03",
+      "name": "Meadow Connector · West",
+      "difficulty": "black",
+      "subtype": "connector",
+      "primary_lift": "L1",
+      "accessible_from_lifts": [
+        "L1"
+      ],
+      "start_node": "W_TOP",
+      "end_node": "M_JOIN",
+      "polyline": [
+        [
+          390,
+          165
+        ],
+        [
+          447,
+          250
+        ],
+        [
+          500,
+          330
+        ],
+        [
+          545,
+          410
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 580.2,
+      "start_elevation_m": 3087.9,
+      "end_elevation_m": 2784.7,
+      "vertical_drop_m": 303.3,
+      "max_segment_uphill_m": -91.23
+    },
+    {
+      "id": "B04",
+      "name": "Aspen Traverse · West",
+      "difficulty": "black",
+      "subtype": "connector",
+      "primary_lift": "L1",
+      "accessible_from_lifts": [
+        "L1"
+      ],
+      "start_node": "W_TOP",
+      "end_node": "A_TOP",
+      "polyline": [
+        [
+          390,
+          165
+        ],
+        [
+          530,
+          235
+        ],
+        [
+          660,
+          330
+        ],
+        [
+          775,
+          430
+        ],
+        [
+          868,
+          530
+        ]
+      ],
+      "width_m": 28,
+      "requires_active_lifts": [
+        "L4"
+      ],
+      "centerline_length_m": 1213.0,
+      "start_elevation_m": 3087.9,
+      "end_elevation_m": 2671.6,
+      "vertical_drop_m": 416.4,
+      "max_segment_uphill_m": -90.45
+    },
+    {
+      "id": "P01",
+      "name": "Westline Terrain Park",
+      "difficulty": "park",
+      "subtype": "short_park",
+      "primary_lift": "L1",
+      "accessible_from_lifts": [
+        "L1"
+      ],
+      "start_node": "W_TOP",
+      "end_node": "PARK_MERGE",
+      "polyline": [
+        [
+          390,
+          165
+        ],
+        [
+          300,
+          260
+        ],
+        [
+          242,
+          370
+        ],
+        [
+          260,
+          500
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 772.9,
+      "start_elevation_m": 3087.9,
+      "end_elevation_m": 2674.9,
+      "vertical_drop_m": 413.0,
+      "max_segment_uphill_m": -123.43
+    },
+    {
+      "id": "B05",
+      "name": "East Cliffs",
+      "difficulty": "black",
+      "subtype": "standard",
+      "primary_lift": "L2",
+      "accessible_from_lifts": [
+        "L2"
+      ],
+      "start_node": "E_TOP",
+      "end_node": "E_BASE",
+      "polyline": [
+        [
+          1010,
+          185
+        ],
+        [
+          970,
+          305
+        ],
+        [
+          985,
+          455
+        ],
+        [
+          1070,
+          600
+        ],
+        [
+          1145,
+          742
+        ],
+        [
+          1205,
+          835
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 1433.2,
+      "start_elevation_m": 3063.0,
+      "end_elevation_m": 2407.5,
+      "vertical_drop_m": 655.5,
+      "max_segment_uphill_m": -72.71
+    },
+    {
+      "id": "B06",
+      "name": "Hawk’s Nest",
+      "difficulty": "black",
+      "subtype": "standard",
+      "primary_lift": "L2",
+      "accessible_from_lifts": [
+        "L2"
+      ],
+      "start_node": "E_TOP",
+      "end_node": "E_BASE",
+      "polyline": [
+        [
+          1010,
+          185
+        ],
+        [
+          1088,
+          310
+        ],
+        [
+          1148,
+          430
+        ],
+        [
+          1230,
+          595
+        ],
+        [
+          1270,
+          720
+        ],
+        [
+          1205,
+          835
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 1458.2,
+      "start_elevation_m": 3063.0,
+      "end_elevation_m": 2407.5,
+      "vertical_drop_m": 655.5,
+      "max_segment_uphill_m": -89.78
+    },
+    {
+      "id": "B07",
+      "name": "Aspen Connector · East",
+      "difficulty": "black",
+      "subtype": "connector",
+      "primary_lift": "L2",
+      "accessible_from_lifts": [
+        "L2"
+      ],
+      "start_node": "E_TOP",
+      "end_node": "A_TOP",
+      "polyline": [
+        [
+          1010,
+          185
+        ],
+        [
+          953,
+          292
+        ],
+        [
+          925,
+          390
+        ],
+        [
+          868,
+          530
+        ]
+      ],
+      "width_m": 28,
+      "requires_active_lifts": [
+        "L4"
+      ],
+      "centerline_length_m": 748.6,
+      "start_elevation_m": 3063.0,
+      "end_elevation_m": 2671.6,
+      "vertical_drop_m": 391.4,
+      "max_segment_uphill_m": -107.22
+    },
+    {
+      "id": "B08",
+      "name": "Meadow Traverse · East",
+      "difficulty": "black",
+      "subtype": "connector",
+      "primary_lift": "L2",
+      "accessible_from_lifts": [
+        "L2"
+      ],
+      "start_node": "E_TOP",
+      "end_node": "M_JOIN",
+      "polyline": [
+        [
+          1010,
+          185
+        ],
+        [
+          881,
+          255
+        ],
+        [
+          760,
+          325
+        ],
+        [
+          652,
+          375
+        ],
+        [
+          545,
+          410
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 1036.3,
+      "start_elevation_m": 3063.0,
+      "end_elevation_m": 2784.7,
+      "vertical_drop_m": 278.3,
+      "max_segment_uphill_m": -37.82
+    },
+    {
+      "id": "B09",
+      "name": "Meadow Link · Final",
+      "difficulty": "black",
+      "subtype": "connector",
+      "primary_lift": "L1",
+      "accessible_from_lifts": [
+        "L1",
+        "L2"
+      ],
+      "start_node": "M_JOIN",
+      "end_node": "M_TOP",
+      "polyline": [
+        [
+          545,
+          410
+        ],
+        [
+          540,
+          460
+        ],
+        [
+          555,
+          515
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 214.5,
+      "start_elevation_m": 2784.7,
+      "end_elevation_m": 2680.2,
+      "vertical_drop_m": 104.4,
+      "max_segment_uphill_m": -50.94
+    },
+    {
+      "id": "P02",
+      "name": "Eastline Terrain Park",
+      "difficulty": "park",
+      "subtype": "standard",
+      "primary_lift": "L2",
+      "accessible_from_lifts": [
+        "L2"
+      ],
+      "start_node": "E_TOP",
+      "end_node": "E_BASE",
+      "polyline": [
+        [
+          1010,
+          185
+        ],
+        [
+          1205,
+          282
+        ],
+        [
+          1347,
+          458
+        ],
+        [
+          1370,
+          610
+        ],
+        [
+          1335,
+          741
+        ],
+        [
+          1205,
+          835
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 1787.4,
+      "start_elevation_m": 3063.0,
+      "end_elevation_m": 2407.5,
+      "vertical_drop_m": 655.5,
+      "max_segment_uphill_m": -73.34
+    },
+    {
+      "id": "B10",
+      "name": "West Needle · Race Line",
+      "difficulty": "black",
+      "subtype": "race",
+      "primary_lift": "BOTH",
+      "accessible_from_lifts": [
+        "L1",
+        "L2"
+      ],
+      "start_node": "RACE_GATE",
+      "end_node": "RACE_FINISH",
+      "polyline": [
+        [
+          105,
+          430
+        ],
+        [
+          95,
+          491
+        ],
+        [
+          65,
+          565
+        ],
+        [
+          90,
+          680
+        ],
+        [
+          85,
+          778
+        ]
+      ],
+      "width_m": 28,
+      "centerline_length_m": 715.0,
+      "start_elevation_m": 2730.6,
+      "end_elevation_m": 2452.0,
+      "vertical_drop_m": 278.6,
+      "max_segment_uphill_m": -52.28
+    },
+    {
+      "id": "G01",
+      "name": "Meadow Loop",
+      "difficulty": "green",
+      "subtype": "standard",
+      "primary_lift": "L3",
+      "accessible_from_lifts": [
+        "L3"
+      ],
+      "start_node": "M_TOP",
+      "end_node": "M_BASE",
+      "polyline": [
+        [
+          555,
+          515
+        ],
+        [
+          475,
+          594
+        ],
+        [
+          454,
+          710
+        ],
+        [
+          503,
+          816
+        ],
+        [
+          560,
+          870
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 851.2,
+      "start_elevation_m": 2680.2,
+      "end_elevation_m": 2380.4,
+      "vertical_drop_m": 299.8,
+      "max_segment_uphill_m": -42.36
+    },
+    {
+      "id": "G02",
+      "name": "Schoolyard",
+      "difficulty": "green",
+      "subtype": "standard",
+      "primary_lift": "L3",
+      "accessible_from_lifts": [
+        "L3"
+      ],
+      "start_node": "M_TOP",
+      "end_node": "M_BASE",
+      "polyline": [
+        [
+          555,
+          515
+        ],
+        [
+          522,
+          608
+        ],
+        [
+          514,
+          744
+        ],
+        [
+          535,
+          825
+        ],
+        [
+          560,
+          870
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 740.1,
+      "start_elevation_m": 2680.2,
+      "end_elevation_m": 2380.4,
+      "vertical_drop_m": 299.8,
+      "max_segment_uphill_m": -35.38
+    },
+    {
+      "id": "U01",
+      "name": "Ribbon Blue",
+      "difficulty": "blue",
+      "subtype": "standard",
+      "primary_lift": "L3",
+      "accessible_from_lifts": [
+        "L3"
+      ],
+      "start_node": "M_TOP",
+      "end_node": "M_BASE",
+      "polyline": [
+        [
+          555,
+          515
+        ],
+        [
+          605,
+          602
+        ],
+        [
+          620,
+          733
+        ],
+        [
+          590,
+          830
+        ],
+        [
+          560,
+          870
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 767.5,
+      "start_elevation_m": 2680.2,
+      "end_elevation_m": 2380.4,
+      "vertical_drop_m": 299.8,
+      "max_segment_uphill_m": -31.55
+    },
+    {
+      "id": "U02",
+      "name": "Glade Traverse",
+      "difficulty": "blue",
+      "subtype": "standard",
+      "primary_lift": "L3",
+      "accessible_from_lifts": [
+        "L3"
+      ],
+      "start_node": "M_TOP",
+      "end_node": "M_BASE",
+      "polyline": [
+        [
+          555,
+          515
+        ],
+        [
+          652,
+          590
+        ],
+        [
+          680,
+          715
+        ],
+        [
+          637,
+          810
+        ],
+        [
+          560,
+          870
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 905.2,
+      "start_elevation_m": 2680.2,
+      "end_elevation_m": 2380.4,
+      "vertical_drop_m": 299.8,
+      "max_segment_uphill_m": -47.41
+    },
+    {
+      "id": "G03",
+      "name": "Aspen Way",
+      "difficulty": "green",
+      "subtype": "standard",
+      "primary_lift": "L4",
+      "accessible_from_lifts": [
+        "L4"
+      ],
+      "start_node": "A_TOP",
+      "end_node": "A_BASE",
+      "polyline": [
+        [
+          868,
+          530
+        ],
+        [
+          815,
+          627
+        ],
+        [
+          799,
+          736
+        ],
+        [
+          832,
+          832
+        ],
+        [
+          885,
+          875
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 780.9,
+      "start_elevation_m": 2671.6,
+      "end_elevation_m": 2376.4,
+      "vertical_drop_m": 295.1,
+      "max_segment_uphill_m": -33.84
+    },
+    {
+      "id": "G04",
+      "name": "Easy Street",
+      "difficulty": "green",
+      "subtype": "standard",
+      "primary_lift": "L4",
+      "accessible_from_lifts": [
+        "L4"
+      ],
+      "start_node": "A_TOP",
+      "end_node": "A_BASE",
+      "polyline": [
+        [
+          868,
+          530
+        ],
+        [
+          848,
+          628
+        ],
+        [
+          844,
+          759
+        ],
+        [
+          859,
+          833
+        ],
+        [
+          885,
+          875
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 712.0,
+      "start_elevation_m": 2671.6,
+      "end_elevation_m": 2376.4,
+      "vertical_drop_m": 295.1,
+      "max_segment_uphill_m": -33.05
+    },
+    {
+      "id": "U03",
+      "name": "Blue Jay",
+      "difficulty": "blue",
+      "subtype": "standard",
+      "primary_lift": "L4",
+      "accessible_from_lifts": [
+        "L4"
+      ],
+      "start_node": "A_TOP",
+      "end_node": "A_BASE",
+      "polyline": [
+        [
+          868,
+          530
+        ],
+        [
+          924,
+          616
+        ],
+        [
+          955,
+          730
+        ],
+        [
+          922,
+          827
+        ],
+        [
+          885,
+          875
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 767.7,
+      "start_elevation_m": 2671.6,
+      "end_elevation_m": 2376.4,
+      "vertical_drop_m": 295.1,
+      "max_segment_uphill_m": -37.72
+    },
+    {
+      "id": "U04",
+      "name": "Sundowner",
+      "difficulty": "blue",
+      "subtype": "standard",
+      "primary_lift": "L4",
+      "accessible_from_lifts": [
+        "L4"
+      ],
+      "start_node": "A_TOP",
+      "end_node": "A_BASE",
+      "polyline": [
+        [
+          868,
+          530
+        ],
+        [
+          968,
+          608
+        ],
+        [
+          1011,
+          720
+        ],
+        [
+          979,
+          818
+        ],
+        [
+          885,
+          875
+        ]
+      ],
+      "width_m": 40,
+      "centerline_length_m": 919.6,
+      "start_elevation_m": 2671.6,
+      "end_elevation_m": 2376.4,
+      "vertical_drop_m": 295.1,
+      "max_segment_uphill_m": -44.65
+    }
+  ],
+  "transfers": [
+    {
+      "id": "T01",
+      "name": "West ridge to western race gate",
+      "mode": "ski_traverse",
+      "from": "W_TOP",
+      "to": "RACE_GATE",
+      "bidirectional": false,
+      "allowed_classes": [
+        "all_mountain",
+        "mixed",
+        "lapper"
+      ],
+      "polyline": [
+        [
+          390,
+          165
+        ],
+        [
+          280,
+          260
+        ],
+        [
+          175,
+          350
+        ],
+        [
+          105,
+          430
+        ]
+      ],
+      "centerline_length_m": 779.9,
+      "elevation_delta_m": -357.4
+    },
+    {
+      "id": "T02",
+      "name": "East high ridge to western race gate",
+      "mode": "ski_traverse",
+      "from": "E_TOP",
+      "to": "RACE_GATE",
+      "bidirectional": false,
+      "allowed_classes": [
+        "all_mountain",
+        "mixed",
+        "lapper"
+      ],
+      "polyline": [
+        [
+          1010,
+          185
+        ],
+        [
+          855,
+          260
+        ],
+        [
+          680,
+          314
+        ],
+        [
+          500,
+          370
+        ],
+        [
+          300,
+          404
+        ],
+        [
+          105,
+          430
+        ]
+      ],
+      "centerline_length_m": 1886.9,
+      "elevation_delta_m": -332.4
+    },
+    {
+      "id": "T03",
+      "name": "West base promenade",
+      "mode": "base_transit",
+      "from": "W_BASE",
+      "to": "M_BASE",
+      "bidirectional": true,
+      "allowed_classes": [
+        "all"
+      ],
+      "polyline": [
+        [
+          205,
+          830
+        ],
+        [
+          350,
+          887
+        ],
+        [
+          455,
+          902
+        ],
+        [
+          560,
+          870
+        ]
+      ],
+      "centerline_length_m": 743.3,
+      "elevation_delta_m": -31.0
+    },
+    {
+      "id": "T04",
+      "name": "Central base promenade",
+      "mode": "base_transit",
+      "from": "M_BASE",
+      "to": "A_BASE",
+      "bidirectional": true,
+      "allowed_classes": [
+        "all"
+      ],
+      "polyline": [
+        [
+          560,
+          870
+        ],
+        [
+          710,
+          902
+        ],
+        [
+          885,
+          875
+        ]
+      ],
+      "centerline_length_m": 660.9,
+      "elevation_delta_m": -4.0
+    },
+    {
+      "id": "T05",
+      "name": "East base promenade",
+      "mode": "base_transit",
+      "from": "A_BASE",
+      "to": "E_BASE",
+      "bidirectional": true,
+      "allowed_classes": [
+        "all"
+      ],
+      "polyline": [
+        [
+          885,
+          875
+        ],
+        [
+          1043,
+          899
+        ],
+        [
+          1205,
+          835
+        ]
+      ],
+      "centerline_length_m": 668.0,
+      "elevation_delta_m": 31.1
+    },
+    {
+      "id": "T06",
+      "name": "Race finish to West base",
+      "mode": "base_transit",
+      "from": "RACE_FINISH",
+      "to": "W_BASE",
+      "bidirectional": true,
+      "allowed_classes": [
+        "all_mountain",
+        "mixed",
+        "lapper"
+      ],
+      "polyline": [
+        [
+          85,
+          778
+        ],
+        [
+          146,
+          797
+        ],
+        [
+          205,
+          830
+        ]
+      ],
+      "centerline_length_m": 263.0,
+      "elevation_delta_m": -40.6
+    }
+  ],
+  "scenarios": {
+    "baseline_3_lifts": {
+      "active_lifts": [
+        "L1",
+        "L2",
+        "L3"
+      ],
+      "inactive_lifts": [
+        "L4"
+      ],
+      "vacationer_lifts": [
+        "L3"
+      ],
+      "note": "The four native L4 green/blue runs and two black connector runs to A_TOP are inactive while L4 is off.",
+      "active_run_ids": [
+        "B01",
+        "B02",
+        "B03",
+        "P01",
+        "B05",
+        "B06",
+        "B08",
+        "B09",
+        "P02",
+        "B10",
+        "G01",
+        "G02",
+        "U01",
+        "U02"
+      ],
+      "inactive_run_ids": [
+        "B04",
+        "B07",
+        "G03",
+        "G04",
+        "U03",
+        "U04"
+      ]
+    },
+    "four_lift_intervention": {
+      "active_lifts": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "inactive_lifts": [],
+      "vacationer_lifts": [
+        "L3",
+        "L4"
+      ],
+      "active_run_ids": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "P01",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B09",
+        "P02",
+        "B10",
+        "G01",
+        "G02",
+        "U01",
+        "U02",
+        "G03",
+        "G04",
+        "U03",
+        "U04"
+      ],
+      "inactive_run_ids": []
+    },
+    "four_lift_capacity_control": {
+      "active_lifts": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "inactive_lifts": [],
+      "vacationer_lifts": [
+        "L3"
+      ],
+      "note": "Optional control distinguishing capacity expansion from vacationer access expansion.",
+      "active_run_ids": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "P01",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B09",
+        "P02",
+        "B10",
+        "G01",
+        "G02",
+        "U01",
+        "U02",
+        "G03",
+        "G04",
+        "U03",
+        "U04"
+      ],
+      "inactive_run_ids": []
+    }
+  },
+  "class_constraints": {
+    "vacationer": {
+      "allowed_difficulties": [
+        "green",
+        "blue"
+      ],
+      "candidate_lifts": "scenarios.<scenario>.vacationer_lifts",
+      "cannot_ride": [
+        "L1",
+        "L2"
+      ]
+    },
+    "all_mountain": {
+      "allowed_difficulties": [
+        "green",
+        "blue",
+        "black",
+        "park"
+      ],
+      "candidate_lifts": "all active reachable lifts"
+    },
+    "lapper": {
+      "allowed_difficulties": [
+        "green",
+        "blue",
+        "black",
+        "park"
+      ],
+      "candidate_lifts": "one fixed assigned lift for each agent"
+    },
+    "mixed": {
+      "allowed_difficulties": [
+        "green",
+        "blue",
+        "black",
+        "park"
+      ],
+      "candidate_lifts": "active reachable lifts subject to externally specified changing preferences"
+    }
+  },
+  "counts": {
+    "black_connector_segments": 5,
+    "total_runs": 20,
+    "green": 4,
+    "blue": 4,
+    "black_including_race": 10,
+    "race_runs": 1,
+    "parks": 2,
+    "total_lifts": 4
+  },
+  "topology_rules": [
+    "Only graph node IDs define connectivity; geometric line intersections do not connect routes.",
+    "Downhill run edges and summit ridge transfers are one-way; lifts transport only base -> top.",
+    "Base promenade/transit edges are bidirectional and impose nonzero travel time.",
+    "A skier finishes a downhill run before reconsidering a lift destination.",
+    "Race gate has two inbound expert-only ridge transfers from W_TOP and E_TOP; the race stays on the far WEST flank.",
+    "At M_JOIN, B03 and B08 converge and can continue down B09 to M_TOP; the intermediate junction is a real graph node.",
+    "P01 is half-length and merges into the explicitly indexed PARK_MERGE junction on B01; follow B01 onward.",
+    "B04 and B07 terminate at A_TOP and each requires_active_lifts L4; closed Aspen ski runs must never strand an agent at A_TOP.",
+    "Skier queue choice must filter active reachable lifts and allowed terrain; no teleportation.",
+    "When L4 is closed its lift, its four native lower runs, and the two black connectors requiring L4 (B04 and B07) are inactive.",
+    "The map defines geometry and feasible movement only; behavioral memory, arrival processes and queue service are configured elsewhere.",
+    "Use scenarios.<scenario>.active_run_ids as the authoritative run activation set, including dependent expert connectors."
+  ],
+  "display_legend": {
+    "green": "#16a36a",
+    "blue": "#1689de",
+    "black": "#202e3c",
+    "park": "#ff7b1c",
+    "lift": "#bc294b"
+  }
+}
