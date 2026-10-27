@@ -1,0 +1,108 @@
+{
+  "version": "3.0.0",
+  "resort": "Ridgeline (synthetic)",
+  "map_file": "../topology/resort-map.json",
+  "seed_default": 20261027,
+  "time": {
+    "unit": "minute",
+    "operating_day_minutes": 420,
+    "simulation_step_seconds": 1,
+    "visual_time_scale": 120,
+    "closing_policy": "At minute 420 stop new spawns and lift boarding; agents already riding or skiing finish a safe route to a base, then exit. Queued agents exit from the lift base. Record actual times until exit."
+  },
+  "population": {
+    "initial_agents": 650,
+    "main_class_weights": {
+      "all_mountain": 25,
+      "vacationer": 35,
+      "lapper": 15,
+      "mixed": 25
+    },
+    "lapper_subtype_weights": {
+      "park": 10,
+      "race": 2,
+      "other": 5
+    },
+    "lapper_race_home_lift_weights": {
+      "L1": 1,
+      "L2": 1
+    },
+    "lapper_other_candidate_runs": {
+      "always_available": ["B01", "B02", "B05", "B06", "G01", "G02", "U01", "U02"],
+      "if_L4_active": ["G03", "G04", "U03", "U04"]
+    },
+    "mixed_exploration_fraction_of_planned_stay": 0.4,
+    "mixed_preferred_lift_count": 2
+  },
+  "spawning": {
+    "process": "poisson",
+    "arrivals_per_minute": 3.0,
+    "arrival_rate_ui_min": 0,
+    "arrival_rate_ui_max": 12,
+    "arrival_rate_ui_step": 0.25,
+    "spawn_location_rule": "Choose among physically admissible active lift bases for the assigned skier class/subtype; seeded random. Do not spawn an agent onto an inaccessible summit. Observe every active queue upon spawning.",
+    "personal_stay_minutes": {
+      "distribution": "uniform",
+      "min": 120,
+      "max": 360
+    },
+    "departure_rule": "Exit at the first safe base location after elapsed personal stay reaches planned stay; never vanish mid-run, mid-transfer, in a queue or on a lift. Resort closing takes priority."
+  },
+  "movement": {
+    "run_meters_per_second": 8.0,
+    "ski_traverse_meters_per_second": 7.0,
+    "base_transit_meters_per_second": 2.2,
+    "lift_ride_time_source": "topology/resort-map.json lifts[].ride_minutes",
+    "length_source": "the sum of segment lengths along the routed polyline, scaled by map coordinates; centerline_length_m is the canonical precomputed value for full edges",
+    "route_policy": "directed graph shortest feasible base-to-base transit time; use real node/edge connections only",
+    "run_choice_policy": "random compatible complete descending itinerary from chosen lift, except specialty lappers follow their assigned specialty",
+    "turtle_visual_size_px": 5,
+    "turtle_visualization": "moving dot markers on polyline at interpolated 3D surface altitude"
+  },
+  "decision": {
+    "cost_function": "travel_minutes_to_lift + last_observed_queue_wait_minutes",
+    "queue_memory_storage": "queue_count_plus_timestamp",
+    "queue_wait_formula": "last_seen_queue_count / (lift.capacity_skiers_per_hour / 60)",
+    "initial_observation": "all active lift queues at spawn",
+    "refresh_policy": "refresh only at physical lift base visit (before decision at current lift and on committed arrival at chosen lift)",
+    "remote_state_visibility": "none after spawn unless physically visited",
+    "ties": "uniform seeded random among equal minimum-cost candidate lifts",
+    "tie_epsilon_minutes": 1e-9,
+    "commitment": "do not reconsider destination until after completion of a downhill itinerary"
+  },
+  "queues": {
+    "discipline": "FIFO",
+    "service_model": "constant per-lift maximum rate with fractional boarding credit carried between fixed time steps",
+    "mu_source": "topology/resort-map.json lifts[].capacity_skiers_per_hour",
+    "actual_boarding": "S_j(t) <= mu_j, constrained by waiting skiers and operating status",
+    "estimated_wait_minutes": "Q_j(t)/(mu_j per minute)",
+    "hard_nonnegative": true
+  },
+  "scenarios": {
+    "baseline_3_lifts": "topology/resort-map.json scenarios.baseline_3_lifts",
+    "four_lift_capacity_control": "topology/resort-map.json scenarios.four_lift_capacity_control",
+    "four_lift_intervention": "topology/resort-map.json scenarios.four_lift_intervention"
+  },
+  "experiments": {
+    "minimum_repetitions_per_parameter_configuration": 20,
+    "paired_seeds": true,
+    "default_repetitions": 20,
+    "scenarios": ["baseline_3_lifts", "four_lift_capacity_control", "four_lift_intervention"],
+    "arrival_rates_per_minute": [2, 3, 4, 6],
+    "sensitivity_classes": true,
+    "sample_queues_every_minutes": 1,
+    "output_formats": ["csv", "json"]
+  },
+  "interface": {
+    "starting_scenario": "baseline_3_lifts",
+    "controls": ["scenario", "arrivals_per_minute", "play_pause", "reset_seed", "speed", "run_batch"],
+    "metrics": ["queue_count_by_lift", "estimated_wait_by_lift", "realized_wait_by_lift", "time_skiing", "population_by_state", "switch_count_by_class", "belief_error"],
+    "graphics": "2D/isometric primary view using supplied surface and path geometry; optional time-of-day shader or 3D mesh"
+  },
+  "provenance": {
+    "class_shares": "synthetic assumptions, not measured Vail GPS proportions",
+    "lapper_subtype_weights": "user-specified design assumption 10:2:5",
+    "skier_profile_motivation": "background literature; do not attribute user's four classes or shares to a source without evidence",
+    "topography": "synthetic modeled mountain, not an actual ski area"
+  }
+}
