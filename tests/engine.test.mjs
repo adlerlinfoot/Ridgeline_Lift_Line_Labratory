@@ -40,10 +40,10 @@ test('remote queues remain hidden; physical arrival refreshes without rerouting'
 });
 test('FIFO boarding respects service spacing, misses empty slots, and has no closing-time boarding',()=>{
   const c=only('vacationer');const s=new Simulation(map,c,{initialAgents:10,dayMinutes:1});const order=s.queues.L3.ids.slice();
-  s.step(3);assert.equal(s.agents[order[0]].state,'LIFT_RIDE');assert.equal(s.agents[order[1]].state,'QUEUE');
-  s.step(3);assert.equal(s.agents[order[1]].state,'LIFT_RIDE');assert.equal(s.agents[order[2]].state,'QUEUE');
-  const q=new Simulation(map,c,{initialAgents:100,dayMinutes:1});advance(q,60);assert.equal(q.queues.L3.boarded,19);assert.equal(q.queues.L3.closingExits,81);assert.equal(q.summary().perLift.L3.meanQueue,90.5);assert.ok(Math.abs(q.summary().perLift.L3.queueStandardDeviation-Math.sqrt(33.25))<1e-9);q.run();q.assertInvariants();
-  const idle=new Simulation(map,c,{initialAgents:0,dayMinutes:20});advance(idle,600);for(let i=0;i<10;i++){const a=idle.createAgent({class:'vacationer',runU:0,spawnU:0,stay:200});idle.commit(a,'L3');}idle.step(3);assert.equal(idle.queues.L3.boarded,1);
+  s.step(6);assert.equal(s.agents[order[0]].state,'LIFT_RIDE');assert.equal(s.agents[order[1]].state,'QUEUE');
+  s.step(6);assert.equal(s.agents[order[1]].state,'LIFT_RIDE');assert.equal(s.agents[order[2]].state,'QUEUE');
+  const q=new Simulation(map,c,{initialAgents:100,dayMinutes:1});advance(q,60);assert.equal(q.queues.L3.boarded,9);assert.equal(q.queues.L3.closingExits,91);assert.equal(q.summary().perLift.L3.meanQueue,95.5);assert.ok(Math.abs(q.summary().perLift.L3.queueStandardDeviation-Math.sqrt(8.25))<1e-9);q.run();q.assertInvariants();
+  const idle=new Simulation(map,c,{initialAgents:0,dayMinutes:20});advance(idle,600);for(let i=0;i<10;i++){const a=idle.createAgent({class:'vacationer',runU:0,spawnU:0,stay:200});idle.commit(a,'L3');}idle.step(6);assert.equal(idle.queues.L3.boarded,1);
 });
 test('park continuation starts at merge; black connectors continue to safe bases; no top boarding',()=>{
   for(const scenario of Object.keys(map.scenarios)){
@@ -66,8 +66,8 @@ test('mixed preferences freeze at threshold using prior completed waits and neve
 });
 test('personal stay expiry cannot abandon a queue; closing still removes it',()=>{
   const c=only('vacationer');c.spawning.personal_stay_minutes={min:.01,max:.01};const s=new Simulation(map,c,{initialAgents:100,mode:'arrival',arrivalRate:0,dayMinutes:2});
-  advance(s,10);assert.equal(s.agents.filter(a=>a.state==='EXITED').length,0);assert.equal(s.queueSize('L3'),97);
-  advance(s,120);assert.equal(s.queues.L3.boarded,39);assert.equal(s.queues.L3.closingExits,61);s.run();s.assertInvariants();
+  advance(s,10);assert.equal(s.agents.filter(a=>a.state==='EXITED').length,0);assert.equal(s.queueSize('L3'),99);
+  advance(s,120);assert.equal(s.queues.L3.boarded,19);assert.equal(s.queues.L3.closingExits,81);s.run();s.assertInvariants();
 });
 test('expired base transfer finishes its current segment, then exits',()=>{
   const c=clone(config);c.spawning.personal_stay_minutes={min:1,max:1};const s=new Simulation(map,c,{mode:'arrival',arrivalRate:0,initialAgents:0});

@@ -116,7 +116,7 @@
       "zone": "upper_west",
       "base": "W_BASE",
       "top": "W_TOP",
-      "capacity_skiers_per_hour": 1800,
+      "capacity_skiers_per_hour": 900,
       "ride_minutes": 7.0,
       "initially_operational": true,
       "terrain": [
@@ -131,7 +131,7 @@
       "zone": "upper_east",
       "base": "E_BASE",
       "top": "E_TOP",
-      "capacity_skiers_per_hour": 1800,
+      "capacity_skiers_per_hour": 900,
       "ride_minutes": 7.0,
       "initially_operational": true,
       "terrain": [
@@ -146,7 +146,7 @@
       "zone": "lower_west",
       "base": "M_BASE",
       "top": "M_TOP",
-      "capacity_skiers_per_hour": 1200,
+      "capacity_skiers_per_hour": 600,
       "ride_minutes": 4.5,
       "initially_operational": true,
       "terrain": [
@@ -161,7 +161,7 @@
       "zone": "lower_east",
       "base": "A_BASE",
       "top": "A_TOP",
-      "capacity_skiers_per_hour": 1200,
+      "capacity_skiers_per_hour": 600,
       "ride_minutes": 4.5,
       "initially_operational": false,
       "terrain": [
