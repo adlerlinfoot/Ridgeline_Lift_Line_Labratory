@@ -1,6 +1,6 @@
 import {Simulation,csv} from './engine.mjs';
 const $=id=>document.getElementById(id);
-const colors={L1:'#ffad66',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
+const colors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
 const classes={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const labels={baseline_3_lifts:'3 lifts · baseline',four_lift_capacity_control:'4 lifts · vacationers on L3',four_lift_intervention:'4 lifts · expanded access'};
 const fmt=(x,d=0)=>x==null?'—':Number(x).toLocaleString(undefined,{maximumFractionDigits:d});
