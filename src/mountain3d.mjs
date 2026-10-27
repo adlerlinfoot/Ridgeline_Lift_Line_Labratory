@@ -236,7 +236,7 @@ export class Mountain3D {
     }
     this.hits=[];
     const agents=[...sim.active].map(id=>sim.agents[id]).filter(a=>a.state!=='QUEUE'&&isConeVisible(agentWorldPosition(sim,a),this.camera)).map(a=>({a,p:project(agentWorldPosition(sim,a))})).sort((a,b)=>a.p.depth-b.p.depth);
-    for(const {a,p} of agents){c.beginPath();c.arc(p.x,p.y,a.id===selected?4.5:2.5,0,Math.PI*2);c.fillStyle=classColors[a.class];c.fill();if(a.id===selected){c.strokeStyle='#fff';c.lineWidth=1.5;c.stroke();}this.hits.push({...p,type:'agent',id:a.id,text:`Skier #${a.id} · ${a.class} · ${a.state}`});}
+    for(const {a,p} of agents){c.beginPath();c.arc(p.x,p.y,a.id===selected?2.25:1.25,0,Math.PI*2);c.fillStyle=classColors[a.class];c.fill();if(a.id===selected){c.strokeStyle='#fff';c.lineWidth=1.5;c.stroke();}this.hits.push({...p,type:'agent',id:a.id,text:`Skier #${a.id} · ${a.class} · ${a.state}`});}
     c.font='10px system-ui';c.textAlign='center';c.textBaseline='middle';
     for(const n of this.map.nodes){
       if(!isConeVisible([n.x,n.y,n.elevation_m],this.camera))continue;
