@@ -54,13 +54,13 @@ There are **five connector black run segments**, deliberately not full-length su
 
 - L3 Meadow: **G01/G02** green and **U01/U02** blue, descending M_TOP → M_BASE.
 - L4 Aspen: **G03/G04** green and **U03/U04** blue, descending A_TOP → A_BASE.
-- Vacationers are eligible **only** for these green/blue runs, never for black connector routes, race, or either terrain park. All-mountain and mixed can use cross-mountain expert links; lappers are locked to their assigned run and its requisite route. `U` run IDs are **blue**, not black.
+- Vacationers are eligible **only** for these green/blue runs, never for black connector routes, race, or either terrain park. All-mountain and mixed can use cross-mountain expert links; park lappers may select L1/L2; race lappers use L1 only; other lappers follow their assigned complete run. `U` run IDs are **blue**, not black.
 
 ## 5. Operating scenarios (critical topology dependencies)
 
 1. `baseline_3_lifts`: **L1/L2/L3 open; L4 closed**. Aspen's four associated green/blue runs are inactive. In addition, **B04 and B07 must be inactive**, because each ends at A_TOP and would strand an agent above inactive downhill pistes. Thus **14 navigable runs** out of 20 mapped ones; the two expert connectors appear muted in the baseline picture.
 2. `four_lift_intervention`: all lifts and all 20 runs active. Vacationers may choose L3 or L4.
-3. `four_lift_capacity_control`: all lifts and all 20 runs active, but vacationers remain constrained to L3. Helps separate added capacity from changing permissions.
+3. `four_lift_capacity_control`: all lifts and all 20 runs active, but vacationers remain constrained to L3. Compares infrastructure expansion with a further vacationer-permission expansion; does not isolate capacity alone.
 
 Use each run's optional `requires_active_lifts` to enforce additional dependencies, independently of `primary_lift`. `primary_lift` is an indexing/convenience attribution, not necessarily the *only* path to a run (for example B09 is reachable from L1 **and** L2).
 

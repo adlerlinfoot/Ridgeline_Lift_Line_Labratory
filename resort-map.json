@@ -1321,7 +1321,7 @@
         "black",
         "park"
       ],
-      "candidate_lifts": "one fixed assigned lift for each agent"
+      "candidate_lifts": "park: L1/L2 by common rule; race: L1 only; other: assigned full-run lift"
     },
     "mixed": {
       "allowed_difficulties": [

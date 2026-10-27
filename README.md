@@ -1,0 +1,70 @@
+# Ridgeline Lift-Line Laboratory
+
+A buildless browser ABM for **The Influence of Heterogeneous Skier Decisions on Lift-Line Congestion and Queue Stability**. Uses the supplied synthetic directed mountain: four lifts, twenty named runs, the park merge and both race approaches. No API key, account or dependency installation is required.
+
+## Run locally
+
+Requires Node.js 20+ (22+ recommended).
+
+```powershell
+node scripts/serve.mjs
+```
+
+Open **http://127.0.0.1:43880/**. On Windows, `Start-Ridgeline.ps1` starts a hidden local server and opens the page. If Node is not on PATH, use `& 'C:\Program Files\nodejs\node.exe' scripts/serve.mjs`.
+
+Choose settings before starting; Reset unlocks them. Speed affects playback only. Click a moving skier for its state, destination, remembered waits and observation times. Queue circles show counts rather than physically stacked dots. Batch experiments run in a background worker and can be cancelled. The static files also work on GitHub Pages; this implementation does not deploy or push automatically.
+
+## Confirmed behavior
+
+- Both modes start with a 650-skier opening rush, uniformly placed among each skier's admissible bases. All observe zero queues simultaneously, choose destinations, then enter queues in seeded-random admission order.
+- **Fixed population:** no new arrivals or personal departures; everyone circulates until closing. **Arrival mode:** opening rush plus homogeneous Poisson arrivals (default 3/minute), planned stays uniform in 120–360 minutes.
+- Destination minimizes feasible valley transfer minutes + personally remembered queue count/capacity + lift ride minutes. Ties are uniformly random among equal minima. Current-base memory refreshes before choice; remote memory refreshes only on physical visits. Committed arrivals cannot reroute.
+- Main classes: all-mountain 25%, vacationer 35%, lapper 15%, mixed 25%. Lapper subtype weights **10:2:5 conditional on being a lapper**. Park specialists can choose L1/L2; race specialists always use L1/T01/B10/T06; other specialists repeat one assigned full run.
+- Mixed skiers freeze up to two experienced lifts with the lowest mean completed personal waits at 40% of their planned stay. One experienced lift remains one. If none has completed a wait, freeze at the first subsequent base decision with experience. Fixed-mode threshold uses 40% of the operating day. Equal average waits use seeded random tie-breaking.
+- General downhill choices are discrete uniform over complete legal itineraries, not sequential junction draws. P01 continues along lower B01; upper connectors continue down lower terrain. T06 completes race itineraries to W_BASE.
+- Instant individual boarding occurs on evenly spaced capacity slots (every 2 seconds on L1/L2, 3 seconds on L3/L4). Empty slots expire. First slots occur after one interval. No queue abandonment before closing.
+- A planned stay expiring in a queue does not interrupt the lap. Expiry during base transit ends at the current segment's endpoint. At closing (420 minutes), boarding and arrivals stop; queues exit. Riders and descending skiers finish full safe itineraries; base transfers end at the next base.
+
+## Infrastructure scenarios
+
+1. Three-lift baseline: L4 and six dependent runs closed; vacationers only L3.
+2. Four-lift comparison with vacationers constrained to L3.
+3. Four-lift expanded access: vacationers can choose L3/L4.
+
+These are **combined infrastructure/terrain/access comparisons**, not pure capacity effects. L4 is configured between replications only. No injected queue disturbance exists.
+
+## Outputs and interpretation
+
+Run JSON includes settings, time series and skier records. Queue CSV contains queue joins, boardings, closing removals, interval arrival/boarding rates, estimated waits, completed mean waits and integrated queue-person-minutes. Skier CSV includes all four time categories, class, assignment, laps and switches. SKI_TRAVERSE counts as transit; named downhill runs count as skiing. At closing, unfinished waits are included in total queue time but excluded from completed-wait means and separately identified in lift summaries.
+
+The primary outputs concern **congestion and queue dynamics**. Skiing time is a supporting diagnostic. Batch comparison reports replicate-level queue-person-minutes with Student-t 95% confidence intervals (conservative tabulated critical values for larger sample counts). These intervals are not mathematical stability tests. Time samples or agents within a run are not independent replications.
+
+The finite operating day and queue balance identity alone do **not** establish equilibrium stability. A formal aggregate arrival closure/stability derivation remains separate research work; see [engine and math](spec/ENGINE_AND_MATH.md).
+
+## Validate
+
+```powershell
+python topology/validate_map.py
+python tests/validate_context.py
+node --test tests/*.test.mjs
+```
+
+For command-line batches (20–200 repetitions per setting):
+
+```powershell
+node scripts/batch.mjs fixed 20
+node scripts/batch.mjs arrival 20
+```
+
+Results go to ignored `.runtime/`. Arrival batches use rates 2, 3, 4 and 6/minute. Identical seeds pre-generate identical exogenous demand times, classes, subtypes and stays across scenarios; scenario-specific admissibility and assignments legitimately differ. Endogenous behavioral draws diverge across scenarios, so this is not identical routing noise.
+
+## Structure and limitations
+
+- Root BEHAVIOR_SPEC.md, MODEL_CONFIG.json, MAP_SPEC.md, resort-map.json are canonical. Root paths replace the original context-pack's absent spec/topology copies.
+- `src/engine.mjs`: DOM-free simulation; event processing inside a fixed one-second driver, exact activity durations and service slots.
+- `reference/rules.mjs`: shared policy primitives; `src/experiments.mjs`: batch design/aggregation.
+- `src/app.mjs`, `index.html`, `styles.css`: static interface; `src/batch-worker.mjs`: background computation.
+- The supplied **terrain grid, heightmap and original SVGs were absent**. The interface preserves exact planar geometry and uses clearly schematic decorative contours; no physical 3D/elevation validation is claimed.
+- The original PDF is retained as draft background, not an implementation/result report. Its completed-work language and bibliography errors have not been edited. All capacities, speeds, geometry, shares and behavioral thresholds are synthetic assumptions.
+
+No external services are needed. See [acceptance criteria](spec/ACCEPTANCE_TESTS.md) and [implementation decisions](spec/OPEN_DECISIONS.md).

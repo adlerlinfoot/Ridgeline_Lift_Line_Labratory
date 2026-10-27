@@ -1,0 +1,37 @@
+# Engine and mathematical contract
+
+User-confirmed rules in the root behavior spec supersede the original draft PDF. This is a simulation implementation; no formal stability result is claimed.
+
+## State and clocks
+
+Each skier occupies exactly one primary state. BASE_DECISION takes zero time. Movement traverses contiguous graph polylines at configured mode speed. Arc lengths use 2 m/pixel. Lift rides follow supplied base/top endpoints over configured ride durations. Missing terrain heights are not invented.
+
+The public driver advances physical time in one-second steps independently of animation. Within each interval a deterministic event heap processes exact activity completions, exponentially distributed arrival times and capacity-paced boarding slots. Equal-time priority: closing, movement/preferences, spawn, boarding, sample; insertion sequence breaks remaining ties. Zero-time base decisions happen during their parent event. Every elapsed second belongs to queue, uphill, skiing or transit, including completion after close. SKI_TRAVERSE is transit.
+
+FIFO service slots are spaced 3600/capacity_skiers_per_hour seconds apart, first slot one interval after opening. Empty slots expire. Each boards at most one skier instantly. Closing has priority at the exact closing timestamp. Instantaneous boardings are discrete counts; throughput inequalities refer to rates/interval capacity, not a bounded derivative at an instantaneous jump.
+
+## Decisions and randomness
+
+Cost in minutes = shortest feasible valley transfer + last personally seen queue count/(capacity/hour / 60) + ride. Strict minima win; tied minima use the seeded PRNG. No remote actual queues are read for policy decisions. A destination is committed through transfer, queue, lift and descent. Passing an intermediate open base refreshes its observation but does not permit rerouting. Expired stays may end a base transfer at the next base.
+
+Opening demand is a simultaneous batch with zero observations. Initial placement is uniform among admissible bases. All initial decisions precede admissions; FIFO opening order is seeded-shuffled. Later births observe then-current active queues. Poisson interarrivals, finite stays and immutable demand traits are generated before behavioral events. Reusing a seed within a population mode preserves exogenous demand across scenarios; route/tie draws can diverge.
+
+Complete legal downhill itineraries are enumerated without repeated nodes and receive equal probability. Explicit junctions alone connect paths. B01 is split internally, preserving its parent ID and inventory count. Specialty lappers filter itineraries before sampling. Mixed preferences use completed wait averages at exact 40% time; unexperienced lifts are never added. If none exists, defer formation to a later base decision. Equal averages use seeded random tie-breaking.
+
+## Queue accounting and analysis boundary
+
+For each lift, exactly: `Q_j(t) = A_j(t) - D_j(t) - C_j(t)`.
+
+A counts joins, D boardings, C closing queue removals. No voluntary queue abandonment occurs. Q is a discrete count process; an arrival counts on joining, not on destination selection.
+
+Interval arrival-rate estimate = delta A / delta time; realized throughput = delta D / delta time. The fluid approximation `dQ/dt = lambda - S` applies before closing under continuous-state/rate assumptions. It is not the literal event process. `lambda*=S*` is necessary balance, not a stability proof or a closed queue-only system: memories, circulating agents, preferences, stays and travel delays affect future arrivals. No closed lambda(Q) is fabricated.
+
+Both population modes and exported trajectories support later analytical work. L4 between-run configuration is the only intervention. A mathematical aggregate closure, its state variables, and a stability derivation remain separate research deliverables.
+
+## Measurements
+
+Queues are sampled once per minute. Queue area is integrated exactly between queue changes, not approximated from plotted samples. Post-closing queues are zero. Completed wait means exclude skiers removed unboarded at closing; those waits still enter queue area and skier counters. Mean queue divides area by operating seconds elapsed, excluding post-close drain. Ongoing counters appear in partial exports.
+
+Q/mu is a perceived workload approximation; it can differ from realized waits under discrete service and closing. Belief error is absolute stale-vs-current wait error at visited bases during committed transfers before refresh, not an all-agent decision-time measure.
+
+Batch confidence intervals are across independent seed replications. Shared seeds aid comparability but do not establish real-world causality. Student-t intervals describe Monte Carlo uncertainty, not stability.

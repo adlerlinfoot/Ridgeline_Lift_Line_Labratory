@@ -1,0 +1,2 @@
+import {configurations,runReplication,aggregate} from './experiments.mjs';
+self.onmessage=({data})=>{try{const jobs=configurations(data.options,data.rates,data.repetitions),rows=[];for(const options of jobs){rows.push(runReplication(data.map,data.config,options));self.postMessage({type:'progress',completed:rows.length,total:jobs.length});}self.postMessage({type:'done',rows,groups:aggregate(rows)});}catch(e){self.postMessage({type:'error',message:e.message});}};

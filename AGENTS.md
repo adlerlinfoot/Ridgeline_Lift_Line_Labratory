@@ -13,7 +13,7 @@ You are implementing a **browser-based, stochastic skier agent-based model (ABM)
 
 ## Strict interpretation
 - **Do not simplify away skier memories**: queue information for remote lifts is stale and changes only after an actual lift-base visit; initializing memory at spawn from current queues is permitted and required.
-- **Do not add arbitrary behavioral weights, utility modifiers, or social influence**. The default destination choice minimizes *network travel minutes + remembered queue minutes* among admissible lift bases. Current base observation must be refreshed before comparing.
+- **Do not add arbitrary behavioral weights, utility modifiers, or social influence**. The default destination choice minimizes *network travel minutes + remembered queue minutes + lift ride minutes* among admissible lift bases. Current base observation must be refreshed before comparing.
 - **Do not overgeneralize lappers**: 10:2:5 **conditional within the lapper class**. Park lappers may migrate L1/L2; race lappers are race-course specialists; other lappers stick to an individually assigned run. `topology/resort-map.json` class constraint has been updated accordingly.
 - Preserve **four lifts**, **20 named runs**, **five connecting black segments**, **park merge**, **race gate and its two summit approaches**, and **three operating scenarios**. Physically crossing colored lines on a map is NOT graph connectivity.
 - Vacationers **never use black or park terrain**, **never ride L1 or L2**, and can ride L4 only in `four_lift_intervention` (not `four_lift_capacity_control`).
@@ -37,3 +37,6 @@ A repo that runs locally and can be deployed to GitHub Pages: self-contained fro
 
 ## Validation
 First run `python topology/validate_map.py`, `python tests/validate_context.py`, and `node --test tests/reference-policy.test.mjs`. All must pass before implementing further engine behavior. New frontend must add reproducibility/invariant tests enumerated in `spec/ACCEPTANCE_TESTS.md`.
+
+## Current checkout layout and user overrides
+Root BEHAVIOR_SPEC.md, MODEL_CONFIG.json, MAP_SPEC.md and resort-map.json are canonical (older spec/topology paths refer to the original context-package layout). Read spec/ENGINE_AND_MATH.md and spec/ACCEPTANCE_TESTS.md for the implemented contract. Race lappers use L1 only; mixed preferences never supplement experienced lifts; both population modes start with a simultaneous zero-memory opening rush. User confirmation authorizes implementation and a local Git commit; no deployment or push requested. The supplied heightfield is absent: use exact 2D geometry without inventing terrain.

@@ -10,11 +10,12 @@ Each individual has a unique `id`, main `class`, current state/position, a perso
 next_lift = argmin over physically reachable, open, class-admissible lifts j:
       network_travel_minutes(current_base, base_of(j))
       + remembered_wait_minutes(agent,j)
+      + lift_ride_minutes(j)
 ```
 
 If already at lift `j`, base-to-base travel is zero. `remembered_wait_minutes` is initialized by observing `Q_j/mu_j` for all *operating* lifts on spawn, and is refreshed for the lift at the agent's *actual present base* when encountered. If storing queue sizes instead, use `remembered_Q_j / mu_j` on the fly. Do not expose or refresh actual remote queue values by polling the global state during decision. `mu_j` means maximum capacity, whereas `S_j(t)` means realized boarding rate.
 
-For mathematical exposition, `j*(t)=argmin_{j∈A_i(t)}(T_travel,c→j + k_j)` where `i` identifies skier and `c` current lift/base. Crucially `k_j` in the *individual* choice is a **last-observed estimate**, not the live hidden remote state.
+For mathematical exposition, `j*(t)=argmin_{j∈A_i(t)}(T_travel,c→j + k_j + T_ride,j)` where `i` identifies skier and `c` current lift/base. Crucially `k_j` in the *individual* choice is a **last-observed estimate**, not the live hidden remote state.
 
 If costs tie numerically within a small epsilon, choose with the simulation's seeded PRNG. Never use random choice to override a strict cost winner. A physical route must exist; otherwise exclude the lift. A destination is committed and not reevaluated halfway across the valley, waiting queue, chair or descent. Choose again only after finishing the chosen downhill itinerary at a base.
 
@@ -46,16 +47,16 @@ Main-class shares in `MODEL_CONFIG.json`: all-mountain `0.25`, vacationer `0.35`
 
 These weights are **not** percentages of the entire resort and do not imply exact fixed counts in finite stochastic samples. Use a weighted independent draw per new lapper, seeded. If an experiment needs exact composition, offer a *separate opt-in stratified initialization*, not a silent deviation from random assignment.
 
-**Park lapper (10 parts):** specialist in terrain parks, not attached permanently to a single lift. Both L1 Westline (P01) and L2 Eastline (P02) are admissible and normally open in all three scenarios. At each valid base decision, compare the **same common objective** (actual valley travel time to each park-serving chair + personal last-observed queue wait). Choose either, including switching between parks if it has lower perceived cost. Once at the chosen summit, ski that chair's **designated park**, not a random black or lower green. P01 is only a half-length park; after P01's `PARK_MERGE`, continue along B01's downstream arc to `W_BASE` without another lift-selection decision at the junction. P02 reaches E_BASE directly. The time on the B01 continuation still counts as downhill skiing, while park-only minutes may be recorded separately. **Do not implement a permanently fixed lapper lift for park subtype.**
+**Park lapper (10 parts):** specialist in terrain parks, not attached permanently to a single lift. Both L1 Westline (P01) and L2 Eastline (P02) are admissible and normally open in all three scenarios. At each valid base decision, compare the **same common objective** (actual valley travel time to each park-serving chair + personal last-observed queue wait + lift ride time). Choose either, including switching between parks if it has lower perceived cost. Once at the chosen summit, ski that chair's **designated park**, not a random black or lower green. P01 is only a half-length park; after P01's `PARK_MERGE`, continue along B01's downstream arc to `W_BASE` without another lift-selection decision at the junction. P02 reaches E_BASE directly. The time on the B01 continuation still counts as downhill skiing, while park-only minutes may be recorded separately. **Do not implement a permanently fixed lapper lift for park subtype.**
 
-**Race lapper (2 parts):** specialist in **B10 race course**, reached from either expert summit using T01 or T02. Assign one supporting lift L1 or L2 at spawn (seeded; default equal odds), and remain dedicated to that lift and race itinerary, even though both summits can reach the race. After riding, traverse the associated ridge access to `RACE_GATE`, ski B10 to `RACE_FINISH`, take T06 to W_BASE, and use the valley network to return to the assigned chair. The per-lap motion is time-consuming and not a teleport. This fixed-home default maintains the lapper commitment rule without inventing another decision equation; adjust only if the user subsequently requests race-lapper migration.
+**Race lapper (2 parts):** always use L1. Repeat L1 -> T01 -> B10 -> T06 -> W_BASE. Never assign L2. The two ridge approaches remain in the topology for other expert-capable skiers.
 
 **Specific-interest / other lapper (5 parts):** randomly choose **one fixed complete run** from the currently operational special-interest candidate set at spawn and assign its requisite lift, then repeat it whenever possible. Recommended defaults in `MODEL_CONFIG.json` are conventional full descents (B01, B02, B05, B06, G01, G02, U01, U02, plus the L4 full descents when L4 is open). The fixed run is *not* an abbreviated connector ending atop another zone and is never an additional park or race. No migration to other lifts based on queues. If assigned B01, follow B01 from W_TOP; park merge is traversed as a through-junction. Candidate list and weighting are explicitly synthetic assumptions, not observations.
 
 ### Mixed (25% assumed)
 - Expert-capable as in all-mountain.
 - During the initial exploration portion of their personal mountain day, all active physically reachable lifts are admissible and decision uses the common rule.
-- Following 40% of their **planned personal skiing stay** (configurable synthetic default), selects a preferred subset of up to two lifts from those actually experienced; if fewer than two were experienced, supplement from admissible active lifts using seeded choice.
+- Following 40% of their **planned personal skiing stay** (configurable synthetic default), selects a preferred subset of up to two lifts from those actually experienced; rank by personally experienced mean realized wait before this transition; retain a sole experienced lift without supplementing. If none has completed a wait, defer freezing until the first valid base decision with experience.
 - Thereafter choose among that stable subset with the same common decision rule (congestion may still cause switching *within that subset*). This models becoming attached to a few runs without a new utility function.
 
 ## C. Practical reachability and run path selection
@@ -79,3 +80,12 @@ Stochastic events include class/subtype assignment, Poisson spawning, finite per
 A skier always occupies exactly one primary state: `BASE_DECISION`, `BASE_TRANSIT`, `QUEUE`, `LIFT_RIDE`, `SKI_RUN`, `SKI_TRAVERSE`, or `EXITED`. Accounting time is classified into `skiing` (including black continuation), `queue`, `uphill`, and `transit` (base walk/skate and optionally non-piste traversal depending on reporting scheme). The *sum of these time counters* must match that individual's non-idle elapsed resort time, within simulation timestep tolerance. No naps, breaks or arbitrary idle state.
 
 For implementation, `BASE_DECISION` is **zero-duration**; it is not an unused-time category. If a skier is forced to finish an in-progress activity near closing, count those minutes and document the closing policy in the results.
+
+## F. Confirmed implementation decisions (supersede older wording)
+
+- Fixed mode: opening rush only, no personal departures until closing. Arrival mode: same opening rush plus Poisson arrivals and finite stays.
+- Opening agents are placed uniformly among admissible lift bases and observe all queues as zero simultaneously before any joins. All equal cost minima use seeded random selection.
+- Lift choice includes lift ride duration, including park lappers. Run choice is discrete uniform over complete feasible itineraries, not uniform at each junction.
+- No queue abandonment except closing. At closing no further boarding: queued agents exit, riders finish their ride and full descent, other moving agents finish to a safe base.
+- The only intervention is the between-run L4 scenario, never an injected queue shock.
+- Primary research outputs concern queue congestion and variability. Skiing time is a supporting agent diagnostic.
