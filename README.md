@@ -22,7 +22,7 @@ Choose settings before starting; Reset unlocks them. Speed affects playback only
 - Main classes: all-mountain 25%, vacationer 35%, lapper 15%, mixed 25%. Lapper subtype weights **10:2:5 conditional on being a lapper**. Park specialists can choose L1/L2; race specialists always use L1/T01/B10/T06; other specialists repeat one assigned full run.
 - Mixed skiers freeze up to two experienced lifts with the lowest mean completed personal waits at 40% of their planned stay. One experienced lift remains one. If none has completed a wait, freeze at the first subsequent base decision with experience. Fixed-mode threshold uses 40% of the operating day. Equal average waits use seeded random tie-breaking.
 - General downhill choices are discrete uniform over complete legal itineraries, not sequential junction draws. P01 continues along lower B01; upper connectors continue down lower terrain. T06 completes race itineraries to W_BASE.
-- Instant individual boarding occurs on evenly spaced capacity slots (every 4 seconds on L1/L2, 6 seconds on L3/L4; capacities 900/h and 600/h respectively). Empty slots expire. First slots occur after one interval. No queue abandonment before closing.
+- Instant individual boarding occurs on evenly spaced capacity slots (every 6 seconds on all four lifts; capacity 600/h each). Empty slots expire. First slots occur after one interval. No queue abandonment before closing.
 - A planned stay expiring in a queue does not interrupt the lap. Expiry during base transit ends at the current segment's endpoint. At closing (420 minutes), boarding and arrivals stop; queues exit. Riders and descending skiers finish full safe itineraries; base transfers end at the next base.
 
 ## Infrastructure scenarios

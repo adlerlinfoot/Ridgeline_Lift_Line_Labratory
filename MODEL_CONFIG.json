@@ -1,5 +1,5 @@
 {
-  "version": "4.1.0",
+  "version": "4.2.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -92,7 +92,7 @@
     "actual_boarding": "S_j(t) <= mu_j, constrained by waiting skiers and operating status",
     "estimated_wait_minutes": "Q_j(t)/(mu_j per minute)",
     "hard_nonnegative": true,
-    "capacity_note": "All four lift capacities halved from original context-pack values: L1/L2 900 per hour, L3/L4 600 per hour. Ride times unchanged."
+    "capacity_note": "All four lifts board at 600 skiers per hour (one skier every six seconds). Ride times unchanged."
   },
   "scenarios": {
     "baseline_3_lifts": "topology/resort-map.json scenarios.baseline_3_lifts",
