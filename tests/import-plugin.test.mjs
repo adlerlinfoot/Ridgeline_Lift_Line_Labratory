@@ -16,3 +16,16 @@ test('imported map overlays and colors follow arbitrary lift IDs',()=>{
 test('imported physical scale is used for walking as well as skiing',()=>{
   const {map,config:c}=prepareImportedMap(fixture(),config,{initialAgents:0}),s=new Simulation(map,c,{scenario:'imported',initialAgents:0}),edge=s.mountain.edges.find(e=>e.parent==='WalkA');assert.ok(Math.abs(edge.length-800)<1e-8);assert.ok(Math.abs(edge.seconds-800/c.movement.base_transit_meters_per_second)<1e-8);
 });
+
+test('no race terrain redistributes lapper probability proportionally to park and other',()=>{
+  const b=fixture();b.map.runs[0].difficulty='park';
+  const {map,config:c}=prepareImportedMap(b,config,{initialAgents:0});
+  c.population.main_class_weights={lapper:1};
+  const before=JSON.stringify(c.population.lapper_subtype_weights);
+  const s=new Simulation(map,c,{scenario:'imported',initialAgents:3000,seed:12,dayMinutes:1});
+  assert.deepEqual(s.lapperSubtypeWeights,{park:10,race:0,other:5});
+  assert.equal(JSON.stringify(c.population.lapper_subtype_weights),before);
+  assert.ok(s.agents.every(a=>a.subtype!=='race'));
+  const park=s.agents.filter(a=>a.subtype==='park').length;
+  assert.ok(Math.abs(park/s.agents.length-2/3)<.03);
+});

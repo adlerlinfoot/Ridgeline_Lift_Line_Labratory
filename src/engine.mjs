@@ -127,9 +127,17 @@ export class Simulation {
     this.mountain=new Mountain(map,config,this.options.scenario);this.random=seededRandom(this.options.seed);this.events=new Heap();this.agents=[];this.active=new Set();this.t=0;this.closed=false;this.done=false;this.closeTime=this.options.dayMinutes*60;this.samples=[];this.switches=0;this.beliefAbs=0;this.beliefN=0;
     this.queues=Object.fromEntries(map.lifts.map(l=>[l.id,{ids:[],head:0,joined:0,boarded:0,closingExits:0,area:0,squaredArea:0,changedAt:0,peak:0,waitTotal:0,waitCount:0,maxWait:0,abandonedWait:0}]));
     this.flowSwitchTime=this.closeTime*(config.spawning.flow_switch_fraction??0.5);this.departureAttempts=0;this.departureSelections=0;
+    // Condition subtype draws on race terrain served by an active lift.
+    this.lapperSubtypeWeights={...config.population.lapper_subtype_weights};
+    const hasRace=this.mountain.scenario.active_lifts.some(id=>this.mountain.itineraries(id,{class:'lapper'}).some(path=>path.some(e=>this.mountain.runs[e.parent]?.subtype==='race')));
+    if(!hasRace){
+      this.lapperSubtypeWeights.race=0;
+      // A race-only custom configuration has no remaining ratio to normalize.
+      if(!Object.values(this.lapperSubtypeWeights).some(w=>w>0))this.lapperSubtypeWeights.other=1;
+    }
     // Pre-generate demand and departure-selection draws before endogenous behavior.
     const profiles=[];
-    const profile=time=>({time,class:this.weighted(config.population.main_class_weights),subtype:this.weighted(config.population.lapper_subtype_weights),runU:this.random(),spawnU:this.random(),lodgeU:this.random()});
+    const profile=time=>({time,class:this.weighted(config.population.main_class_weights),subtype:this.weighted(this.lapperSubtypeWeights),runU:this.random(),spawnU:this.random(),lodgeU:this.random()});
     for(let i=0;i<this.options.initialAgents;i++)profiles.push(profile(0));
     if(this.options.mode==='arrival'&&this.options.arrivalRate>0){
       let t=0;while(true){t+=-Math.log(1-this.random())*60/this.options.arrivalRate;if(t>=this.flowSwitchTime)break;profiles.push(profile(t));}
