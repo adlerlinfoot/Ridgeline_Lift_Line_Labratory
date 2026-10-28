@@ -106,3 +106,11 @@ Set Spawn at Main Lodge from 0–100% before starting (default 100%). It sets ea
 ## Continuous non-lodge spawn locations
 
 For the non-lodge fraction, the spawn domain is the union of valley paths connecting that skier’s admissible lifts. Sampling is uniform in meters, including bends, and shared/reversed path sections are not double-counted. Skier positions begin at the sampled point, with partial walking edges in either direction; destination costs include that exact remaining distance. A sole admissible lift has no connecting path, so its base is the degenerate fallback. No summit, piste or race-finish return path is included. CSV/JSON records now include spawnPath, spawnEdge, spawnFraction, spawnX, spawnY and spawnElevation.
+
+## Repeated-run overlays
+
+Use Overlay congestion across runs to run 2–200 independent simulation days (default 20). The selected scenario, population mode, opening count, flow rate, lodge percentage and model config stay fixed; seeds increment from the current seed. This is descriptive repeated simulation, not forecasting, fitting or predictive inference. It does not automatically compare scenarios.
+
+Every run contributes its own thin line. L1 remains red, L2 purple, L3 blue and L4 green via one shared palette used by all views. Switch queue count/estimated wait and toggle lifts to inspect overlaps. Hover reports observed min/max across completed runs at the selected minute, not a confidence interval. The background worker does not change the live simulation. Stop retains only fully completed runs and marks the output partial.
+
+Plain-text (.txt) export contains settings, seeds, capacities, per-run lift summaries and tab-separated minute values. CSV contains the same minute-by-minute queue counts and estimated waits in wide form, with run and seed columns. Closed lifts are blank. Time series cover opening through closing, excluding post-close drain.

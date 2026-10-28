@@ -2,7 +2,7 @@
 // interpolated by planar arc length. This is a view, never a second simulation.
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-const liftColors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
+import {liftColors} from './palette.mjs';
 const classColors={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const trailColors={green:'#68be91',blue:'#65a3d9',black:'#afc3ce',park:'#e5a15e'};
 export const nodeLabel=id=>({W_TOP:'West peak',E_TOP:'East Peak',A_TOP:'Aspen peak',M_TOP:'Meadow top',LODGE:'Main Lodge'})[id]??id.replaceAll('_',' ');

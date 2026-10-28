@@ -1,5 +1,5 @@
 {
-  "version": "6.2.0",
+  "version": "6.3.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -133,7 +133,8 @@
       "node_labels",
       "cone_wrap",
       "orbit_gyroscope",
-      "lodge_spawn_percent"
+      "lodge_spawn_percent",
+      "repeated_run_overlays"
     ],
     "metrics": [
       "queue_count_by_lift",

@@ -38,3 +38,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Continuous promenade spawning
 
 37 tests pass. New tests check length-weighted path allocation for 3,000 skiers, exact initial coordinates/partial walking geometry, L3–L4-only vacationer path eligibility, sole-lift degeneracy, and minute-wise full-day invariants in all six scenario/population combinations at 35% lodge share. Existing slider/later-arrival tests now validate path-based fallback origins.
+
+## Descriptive repeated-run overlays
+
+42 tests pass. New tests verify that only seeds vary, overlay observations exactly match raw simulation samples, closed-lift handling, plain-text/CSV numeric provenance, shared lift colors and a real overlay worker. DOM integration exercises worker completion, lift/metric controls, observed-range hover, TXT/CSV downloads and cancellation. No forecasting or confidence-interval mechanism is present in the overlay feature. Full rendered browser verification remains unavailable.

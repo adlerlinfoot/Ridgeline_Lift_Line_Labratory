@@ -1,7 +1,8 @@
 import {Simulation,csv} from './engine.mjs';
 import {Mountain3D,nodeLabel} from './mountain3d.mjs';
 const $=id=>document.getElementById(id);
-const colors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
+import {liftColors as colors} from './palette.mjs';
+import {initializeOverlays} from './overlay-ui.mjs';
 const classes={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const labels={baseline_3_lifts:'3 lifts · baseline',four_lift_capacity_control:'4 lifts · vacationers on L3',four_lift_intervention:'4 lifts · expanded access'};
 const fmt=(x,d=0)=>x==null?'—':Number(x).toLocaleString(undefined,{maximumFractionDigits:d});
@@ -84,5 +85,6 @@ try{
   $('export-json').onclick=()=>download(`ridgeline-${sim.options.seed}.json`,JSON.stringify(runExport(),null,2),'application/json');
   $('export-series').onclick=()=>download(`ridgeline-queues-${sim.options.seed}.csv`,csv(sim.samples),'text/csv');
   $('export-agents').onclick=()=>download(`ridgeline-skiers-${sim.options.seed}.csv`,csv(sim.agentRows()),'text/csv');
+  initializeOverlays({map,config,getOptions:options,download});
   requestAnimationFrame(frame);
 }catch(e){message(`Could not start: ${e.message}. Serve this folder over HTTP; do not open index.html as a file.`);}
