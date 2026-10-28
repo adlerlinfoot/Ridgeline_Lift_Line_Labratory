@@ -1,5 +1,5 @@
 {
-  "version": "6.1.0",
+  "version": "6.2.0",
   "resort": "Ridgeline (synthetic)",
   "map_file": "resort-map.json",
   "seed_default": 20261027,
@@ -55,7 +55,7 @@
     "arrival_rate_ui_min": 0,
     "arrival_rate_ui_max": 12,
     "arrival_rate_ui_step": 0.25,
-    "spawn_location_rule": "Each skier independently spawns at Main Lodge with probability lodge_spawn_percent/100; otherwise uniformly at a class/subtype-admissible active lift base. Applies to opening and later arrivals. Lodge-origin skiers travel timed valley routes.",
+    "spawn_location_rule": "With probability lodge_spawn_percent/100 spawn at Main Lodge. Otherwise sample uniformly by physical arc length over the union of valley paths connecting the skier's admissible lift bases, without counting shared/reverse segments twice. Walk from that exact point toward the chosen lift. If only one lift is admissible, its base is the degenerate fallback. Applies to opening and later arrivals.",
     "departure_rule": "Arrival mode: Poisson arrivals in first half; equal-rate Poisson departure selections in second half, uniformly from active skiers not already selected. Selected skiers finish their current committed lap; in base transit exit at next base. No random stay-based exits. Closing overrides queues.",
     "flow_switch_fraction": 0.5,
     "spawn_node": "LODGE",

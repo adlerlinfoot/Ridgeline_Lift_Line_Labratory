@@ -126,7 +126,7 @@ test('lodge splits T04 without adding distance and later arrivals also start the
 test('lodge percentage supports endpoints and seeded mixtures with class-admissible alternatives',()=>{
   for(const scenario of Object.keys(map.scenarios))for(const lodgePercent of [0,40,100]){
     const s=new Simulation(map,config,{scenario,lodgePercent,initialAgents:1000});let lodge=0;
-    for(const a of s.agents){if(a.spawnNode==='LODGE')lodge++;else assert.ok(s.mountain.candidates(a).includes(s.mountain.baseLift[a.spawnNode]));}
+    for(const a of s.agents){if(a.spawnNode==='LODGE')lodge++;else if(a.spawnEdge)assert.ok(s.mountain.promenadeEdges(a).some(e=>e.id===a.spawnEdge));else assert.ok(s.mountain.candidates(a).includes(s.mountain.baseLift[a.spawnNode]));}
     if(lodgePercent===0)assert.equal(lodge,0);else if(lodgePercent===100)assert.equal(lodge,1000);else assert.ok(Math.abs(lodge/1000-.4)<.05);
     const twin=new Simulation(map,config,{scenario,lodgePercent,initialAgents:1000});assert.deepEqual(s.agents.map(a=>a.spawnNode),twin.agents.map(a=>a.spawnNode));
   }
@@ -136,5 +136,25 @@ test('lodge percentage also applies to later Poisson arrivals and is exported',(
   const s=new Simulation(map,config,{mode:'arrival',lodgePercent:50});s.run();s.assertInvariants();
   const late=s.agents.filter(a=>a.born>0),lodge=late.filter(a=>a.spawnNode==='LODGE').length;
   assert.ok(lodge>late.length*.4&&lodge<late.length*.6);assert.equal(s.summary().options.lodgePercent,50);
-  for(const a of late.filter(a=>a.spawnNode!=='LODGE'))assert.ok(s.mountain.candidates({...a,preferred:null}).includes(s.mountain.baseLift[a.spawnNode]));
+  for(const a of late.filter(a=>a.spawnNode!=='LODGE')){const original={...a,preferred:null};if(a.spawnEdge)assert.ok(s.mountain.promenadeEdges(original).some(e=>e.id===a.spawnEdge));else assert.ok(s.mountain.candidates(original).includes(s.mountain.baseLift[a.spawnNode]));}
+});
+
+test('non-lodge origins are uniform by path length and walk continuously to admissible lifts',()=>{
+  const c=only('all_mountain'),s=new Simulation(map,c,{lodgePercent:0,initialAgents:3000,scenario:'four_lift_intervention'}),counts={};
+  const edges=s.mountain.promenadeEdges(s.agents[0]),total=edges.reduce((n,e)=>n+e.length,0);
+  for(const a of s.agents){assert.equal(a.state,'BASE_TRANSIT');assert.ok(a.spawnAccess.length===2);counts[a.spawnEdge]=(counts[a.spawnEdge]??0)+1;assert.deepEqual(s.position(a),[a.spawnPosition.x,a.spawnPosition.y]);assert.ok(a.edge.seconds>0);assert.deepEqual(a.edge.points[0],[a.spawnPosition.x,a.spawnPosition.y]);}
+  for(const e of edges)assert.ok(Math.abs((counts[e.id]??0)/3000-e.length/total)<.035,e.id);
+  assert.ok(!edges.some(e=>e.parent==='T06'));
+  s.step(60);s.assertInvariants();
+});
+test('vacationers use only the L3-L4 connecting path when both admissible; single-lift specialists stay at their sole base',()=>{
+  const c=only('vacationer'),s=new Simulation(map,c,{lodgePercent:0,initialAgents:200,scenario:'four_lift_intervention'});
+  assert.ok(s.agents.every(a=>a.spawnPath==='T04'));s.run();s.assertInvariants();
+  const baseline=new Simulation(map,c,{lodgePercent:0,initialAgents:100});assert.ok(baseline.agents.every(a=>a.spawnNode==='M_BASE'));
+  const race=only('lapper');race.population.lapper_subtype_weights={race:1};const r=new Simulation(map,race,{lodgePercent:0,initialAgents:100});assert.ok(r.agents.every(a=>a.spawnNode==='W_BASE'));
+});
+test('non-lodge path spawning preserves invariants across every full-day scenario and population mode',()=>{
+  for(const mode of ['fixed','arrival'])for(const scenario of Object.keys(map.scenarios)){
+    const s=new Simulation(map,config,{lodgePercent:35,mode,scenario,initialAgents:150});while(!s.done){s.step(60);s.assertInvariants();}
+  }
 });

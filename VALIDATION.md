@@ -34,3 +34,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Lodge percentage slider
 
 34 automated tests pass. Added exact 0/100% cases and seeded 40% mixtures across all three scenarios, class-admissible fallback locations, reproducibility, invalid-range rejection, and later-arrival 50% allocation/export. DOM integration checks slider output and locking at run start.
+
+## Continuous promenade spawning
+
+37 tests pass. New tests check length-weighted path allocation for 3,000 skiers, exact initial coordinates/partial walking geometry, L3–L4-only vacationer path eligibility, sole-lift degeneracy, and minute-wise full-day invariants in all six scenario/population combinations at 35% lodge share. Existing slider/later-arrival tests now validate path-based fallback origins.

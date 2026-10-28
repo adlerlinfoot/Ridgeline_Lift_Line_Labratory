@@ -5,6 +5,15 @@ export function seededRandom(seed) {
   return () => { x += 0x6D2B79F5; let z=x; z=Math.imul(z^(z>>>15),z|1); z^=z+Math.imul(z^(z>>>7),z|61); return ((z^(z>>>14))>>>0)/4294967296; };
 }
 const sumLength = points => points.slice(1).reduce((s,p,i)=>s+Math.hypot(p[0]-points[i][0],p[1]-points[i][1])*2,0);
+export function splitPolyline(points,fraction){
+  let target=sumLength(points)*fraction;
+  for(let i=1;i<points.length;i++){
+    const length=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1])*2;
+    if(target<=length||i===points.length-1){const f=Math.max(0,Math.min(1,target/(length||1))),point=points[i-1].map((x,k)=>x+(points[i][k]-x)*f);return {point,before:[...points.slice(0,i),point],after:[point,...points.slice(i)]};}
+    target-=length;
+  }
+  throw new Error('Cannot sample empty polyline');
+}
 const category = state => ({QUEUE:'queue',LIFT_RIDE:'uphill',SKI_RUN:'skiing',SKI_TRAVERSE:'transit',BASE_TRANSIT:'transit'})[state];
 
 // Event time is physical time in seconds. step() is a fixed-time driver; rendering never advances physics.
@@ -24,7 +33,7 @@ export class Mountain {
     this.lifts=Object.fromEntries(map.lifts.map(l=>[l.id,l]));
     this.baseLift=Object.fromEntries(map.lifts.map(l=>[l.base,l.id]));
     this.runs=Object.fromEntries(map.runs.map(r=>[r.id,r]));
-    this.down={};this.walk={};this.edges=[];this.pathCache=new Map();
+    this.down={};this.walk={};this.edges=[];this.pathCache=new Map();this.spawnCache=new Map();
     const add=(e,g)=>{this.edges.push(e);(g[e.from]??=[]).push(e);};
     for(const r of map.runs){
       if(!this.scenario.active_run_ids.includes(r.id))continue;
@@ -49,6 +58,10 @@ export class Mountain {
   allowed(edge,a){return a.class!=='vacationer'||(edge.state==='BASE_TRANSIT'?edge.allowed.includes('all'):['green','blue'].includes(edge.difficulty));}
   transfer(from,to,a){
     if(from===to)return [];
+    if(a.spawnAccess?.some(e=>e.from===from)){
+      const choices=a.spawnAccess.map(e=>{const rest=this.transfer(e.to,to,{...a,spawnAccess:null});return rest===null?null:[e,...rest];}).filter(Boolean);
+      return choices.sort((a,b)=>a.reduce((s,e)=>s+e.seconds,0)-b.reduce((s,e)=>s+e.seconds,0))[0]??null;
+    }
     const dist={[from]:0},paths={[from]:[]},todo=new Set([from]);
     while(todo.size){const n=[...todo].sort((a,b)=>dist[a]-dist[b])[0];todo.delete(n);if(n===to)return paths[n];
       for(const e of this.walk[n]??[]){if(!this.allowed(e,a))continue;const cost=dist[n]+e.seconds;if(cost<(dist[e.to]??Infinity)){dist[e.to]=cost;paths[e.to]=[...paths[n],e];todo.add(e.to);}}
@@ -70,6 +83,25 @@ export class Mountain {
     if(a.class==='vacationer')return this.scenario.vacationer_lifts;
     if(a.class==='lapper')return a.subtype==='park'?['L1','L2']:[a.home];
     return a.preferred??this.scenario.active_lifts;
+  }
+  promenadeEdges(a){
+    const ids=this.candidates(a),key=a.class+':'+[...ids].sort().join('|');
+    if(this.spawnCache.has(key))return this.spawnCache.get(key);
+    const union=new Map();
+    for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)for(const e of this.transfer(this.lifts[ids[i]].base,this.lifts[ids[j]].base,a)??[]){const id=e.id.replace(/:reverse$/,'');union.set(id,this.edges.find(x=>x.id===id));}
+    const edges=[...union.values()].sort((a,b)=>a.id.localeCompare(b.id));this.spawnCache.set(key,edges);return edges;
+  }
+  spawnOnPromenade(a,u){
+    const edges=this.promenadeEdges(a);
+    if(!edges.length){a.node=this.lifts[this.candidates(a)[0]].base;return;}
+    const total=edges.reduce((s,e)=>s+e.length,0);let distance=u*total,edge=edges.at(-1);
+    for(const e of edges){edge=e;if(distance<e.length)break;distance-=e.length;}
+    const fraction=Math.max(0,Math.min(1,distance/edge.length)),split=splitPolyline(edge.points,fraction),id=`SPAWN:${a.id}`;
+    a.spawnPath=edge.parent;a.spawnEdge=edge.id;a.spawnFraction=fraction;
+    if(fraction<1e-12||fraction>1-1e-12){a.node=fraction<.5?edge.from:edge.to;return;}
+    const elevation=this.nodes[edge.from].elevation_m+(this.nodes[edge.to].elevation_m-this.nodes[edge.from].elevation_m)*fraction;
+    this.nodes[id]={id,x:split.point[0],y:split.point[1],elevation_m:elevation,kind:'spawn_point'};a.node=id;
+    a.spawnAccess=[{...edge,id:id+':back',from:id,to:edge.from,points:[...split.before].reverse()},{...edge,id:id+':forward',from:id,to:edge.to,points:split.after}].map(e=>({...e,length:sumLength(e.points),seconds:sumLength(e.points)/this.config.movement.base_transit_meters_per_second}));
   }
 }
 
@@ -111,10 +143,11 @@ export class Simulation {
       a.run=candidates[Math.floor(p.runU*candidates.length)];a.home=this.mountain.runs[a.run].primary_lift;
     }
     const atLodge=(p.lodgeU??this.random())<this.options.lodgePercent/100;
-    const candidates=this.mountain.candidates(a);
-    a.node=atLodge?(this.config.spawning.spawn_node??'LODGE'):this.mountain.lifts[candidates[Math.floor((p.spawnU??this.random())*candidates.length)]].base;
+    if(atLodge)a.node=this.config.spawning.spawn_node??'LODGE';
+    else this.mountain.spawnOnPromenade(a,p.spawnU??this.random());
     if(!this.mountain.nodes[a.node])throw new Error('Spawn node missing from topology');
     a.spawnNode=a.node;
+    a.spawnPosition={...this.mountain.nodes[a.node]};
     for(const id of this.mountain.scenario.active_lifts){a.memory[id]=opening?0:this.queueSize(id);a.seen[id]=this.t;}
     this.agents.push(a);this.active.add(a.id);
     if(a.class==='mixed')this.events.push(a.born+a.plannedStay*this.config.population.mixed_exploration_fraction_of_planned_stay,1,'preferences',a.id);
@@ -232,7 +265,7 @@ export class Simulation {
     const pts=a.edge.points,length=sumLength(pts),fraction=Math.max(0,Math.min(1,(this.t-a.edgeStart)/(a.edgeEnd-a.edgeStart)));let target=fraction*length;
     for(let i=1;i<pts.length;i++){const n=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1])*2;if(target<=n)return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*target/n,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*target/n];target-=n;}return pts.at(-1);
   }
-  agentRows(){return this.agents.map(a=>{const c=this.counters(a);return {id:a.id,spawnNode:a.spawnNode,class:a.class,subtype:a.subtype,assignedLift:a.home,assignedRun:a.run,bornMinutes:a.born/60,plannedStayMinutes:a.plannedStay/60,exitMinutes:a.exitedAt==null?null:a.exitedAt/60,departureRequestedMinutes:a.departureRequestedAt===null?null:a.departureRequestedAt/60,state:a.state,skiingMinutes:c.skiing/60,queueMinutes:c.queue/60,liftMinutes:c.uphill/60,transitMinutes:c.transit/60,laps:a.laps,switches:a.switches,preferredLifts:a.preferred?.join('|')??''};});}
+  agentRows(){return this.agents.map(a=>{const c=this.counters(a);return {id:a.id,spawnNode:a.spawnNode,spawnPath:a.spawnPath??null,spawnEdge:a.spawnEdge??null,spawnFraction:a.spawnFraction??null,spawnX:a.spawnPosition.x,spawnY:a.spawnPosition.y,spawnElevation:a.spawnPosition.elevation_m,class:a.class,subtype:a.subtype,assignedLift:a.home,assignedRun:a.run,bornMinutes:a.born/60,plannedStayMinutes:a.plannedStay/60,exitMinutes:a.exitedAt==null?null:a.exitedAt/60,departureRequestedMinutes:a.departureRequestedAt===null?null:a.departureRequestedAt/60,state:a.state,skiingMinutes:c.skiing/60,queueMinutes:c.queue/60,liftMinutes:c.uphill/60,transitMinutes:c.transit/60,laps:a.laps,switches:a.switches,preferredLifts:a.preferred?.join('|')??''};});}
   summary(){
     const perLift={};for(const [id,q] of Object.entries(this.queues)){const size=this.queueSize(id),dt=this.t-q.changedAt,area=q.area+size*dt,duration=Math.min(this.t||1,this.closeTime),mean=area/duration;perLift[id]={joined:q.joined,boarded:q.boarded,closingExits:q.closingExits,peakQueue:q.peak,queuePersonMinutes:area/60,meanQueue:mean,queueStandardDeviation:Math.sqrt(Math.max(0,(q.squaredArea+size*size*dt)/duration-mean*mean)),meanCompletedWaitMinutes:q.waitCount?q.waitTotal/q.waitCount/60:null,maxCompletedWaitMinutes:q.waitCount?q.maxWait/60:null,closingUnboardedWaitMinutes:q.abandonedWait/60};}
     const rows=this.agentRows();return {options:{...this.options},finished:this.done,elapsedMinutes:this.t/60,spawned:this.agents.length,active:this.active.size,flowSwitchMinutes:this.flowSwitchTime/60,departureAttempts:this.departureAttempts,departureSelections:this.departureSelections,switches:this.switches,meanArrivalBeliefErrorMinutes:this.beliefN?this.beliefAbs/this.beliefN:null,perLift,totalQueuePersonMinutes:Object.values(perLift).reduce((s,q)=>s+q.queuePersonMinutes,0),meanSkiingMinutes:rows.length?rows.reduce((s,a)=>s+a.skiingMinutes,0)/rows.length:0};

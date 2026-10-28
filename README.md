@@ -101,4 +101,8 @@ Every opening and later-arrival skier starts at Main Lodge (LODGE), halfway alon
 
 ## Lodge spawn percentage
 
-Set Spawn at Main Lodge from 0–100% before starting (default 100%). It sets each opening/later-arrival skier’s independent probability of spawning at the lodge. The remainder spawn uniformly among their admissible active lift bases. Finite samples fluctuate around intermediate percentages; 0% and 100% are exact. Class shares and lapper assignments are unchanged. Reset unlocks the slider. The run export records lodgePercent and each skier’s spawnNode.
+Set Spawn at Main Lodge from 0–100% before starting (default 100%). It sets each opening/later-arrival skier’s independent probability of spawning at the lodge. The remainder spawn uniformly by distance along paths connecting their admissible active lift bases. Finite samples fluctuate around intermediate percentages; 0% and 100% are exact. Class shares and lapper assignments are unchanged. Reset unlocks the slider. The run export records lodgePercent and each skier’s spawnNode.
+
+## Continuous non-lodge spawn locations
+
+For the non-lodge fraction, the spawn domain is the union of valley paths connecting that skier’s admissible lifts. Sampling is uniform in meters, including bends, and shared/reversed path sections are not double-counted. Skier positions begin at the sampled point, with partial walking edges in either direction; destination costs include that exact remaining distance. A sole admissible lift has no connecting path, so its base is the degenerate fallback. No summit, piste or race-finish return path is included. CSV/JSON records now include spawnPath, spawnEdge, spawnFraction, spawnX, spawnY and spawnElevation.
