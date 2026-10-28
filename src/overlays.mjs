@@ -18,7 +18,8 @@ export function overlayRun(map,config,options){
 }
 
 export function overlayRows(runs){
-  return runs.flatMap((run,index)=>run.series.map(row=>({run:index+1,seed:run.seed,minute:row.minutes,...Object.fromEntries(['L1','L2','L3','L4'].map(id=>[id+'_queue',row.queue[id]])),...Object.fromEntries(['L1','L2','L3','L4'].map(id=>[id+'_estimated_wait_minutes',row.wait[id]]))})));
+  const ids=[...new Set(runs.flatMap(r=>Object.keys(r.series[0]?.queue??{})))];
+  return runs.flatMap((run,index)=>run.series.map(row=>({run:index+1,seed:run.seed,minute:row.minutes,...Object.fromEntries(ids.map(id=>[id+'_queue',row.queue[id]])),...Object.fromEntries(ids.map(id=>[id+'_estimated_wait_minutes',row.wait[id]]))})));
 }
 export const overlayCSV=runs=>csv(overlayRows(runs));
 

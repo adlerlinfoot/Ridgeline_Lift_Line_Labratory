@@ -4,7 +4,7 @@ export function seededRandom(seed) {
   let x = Number(seed) >>> 0;
   return () => { x += 0x6D2B79F5; let z=x; z=Math.imul(z^(z>>>15),z|1); z^=z+Math.imul(z^(z>>>7),z|61); return ((z^(z>>>14))>>>0)/4294967296; };
 }
-const sumLength = points => points.slice(1).reduce((s,p,i)=>s+Math.hypot(p[0]-points[i][0],p[1]-points[i][1])*2,0);
+const sumLength = (points,scale=2) => points.slice(1).reduce((s,p,i)=>s+Math.hypot(p[0]-points[i][0],p[1]-points[i][1])*scale,0);
 export function splitPolyline(points,fraction){
   let target=sumLength(points)*fraction;
   for(let i=1;i<points.length;i++){
@@ -28,6 +28,8 @@ class Heap {
 export class Mountain {
   constructor(map, config, scenario) {
     this.map=map; this.config=config; this.scenario=map.scenarios[scenario];
+    this.generated=map.behavior?.generated===true;this.metersPerPixel=map.coordinate_system?.meters_per_pixel_xy??2;
+    this.routeLength=points=>sumLength(points,this.metersPerPixel);
     if(!this.scenario)throw new Error('Unknown scenario');
     this.nodes=Object.fromEntries(map.nodes.map(n=>[n.id,n]));
     this.lifts=Object.fromEntries(map.lifts.map(l=>[l.id,l]));
@@ -41,7 +43,7 @@ export class Mountain {
       const stops=[{node_id:r.start_node,polyline_index:0},...(r.junction_nodes??[]),{node_id:r.end_node,polyline_index:r.polyline.length-1}].sort((a,b)=>a.polyline_index-b.polyline_index);
       for(let i=1;i<stops.length;i++){
         const points=r.polyline.slice(stops[i-1].polyline_index,stops[i].polyline_index+1);
-        add({id:`${r.id}:${i}`,parent:r.id,from:stops[i-1].node_id,to:stops[i].node_id,points,length:sumLength(points),seconds:sumLength(points)/config.movement.run_meters_per_second,state:'SKI_RUN',difficulty:r.difficulty},this.down);
+        add({id:`${r.id}:${i}`,parent:r.id,from:stops[i-1].node_id,to:stops[i].node_id,points,length:this.routeLength(points),seconds:this.routeLength(points)/config.movement.run_meters_per_second,state:'SKI_RUN',difficulty:r.difficulty},this.down);
       }
     }
     for(const tr of map.transfers){
@@ -49,13 +51,13 @@ export class Mountain {
       const stops=[{node_id:tr.from,polyline_index:0},...(tr.junction_nodes??[]),{node_id:tr.to,polyline_index:tr.polyline.length-1}].sort((a,b)=>a.polyline_index-b.polyline_index);
       for(let i=1;i<stops.length;i++){
         const a=stops[i-1],b=stops[i],points=tr.polyline.slice(a.polyline_index,b.polyline_index+1);
-        const edge={id:stops.length===2?tr.id:`${tr.id}:${i}`,parent:tr.id,from:a.node_id,to:b.node_id,points,length:sumLength(points),seconds:sumLength(points)/speed,state:tr.mode==='base_transit'?'BASE_TRANSIT':'SKI_TRAVERSE',allowed:tr.allowed_classes};
+        const edge={id:stops.length===2?tr.id:`${tr.id}:${i}`,parent:tr.id,from:a.node_id,to:b.node_id,points,length:this.routeLength(points),seconds:this.routeLength(points)/speed,state:tr.mode==='base_transit'?'BASE_TRANSIT':'SKI_TRAVERSE',allowed:tr.allowed_classes};
         add(edge,tr.mode==='base_transit'?this.walk:this.down);
         if(tr.bidirectional)add({...edge,id:`${edge.id}:reverse`,from:edge.to,to:edge.from,points:[...points].reverse()},this.walk);
       }
     }
   }
-  allowed(edge,a){return a.class!=='vacationer'||(edge.state==='BASE_TRANSIT'?edge.allowed.includes('all'):['green','blue'].includes(edge.difficulty));}
+  allowed(edge,a){return a.class!=='vacationer'||(edge.state==='BASE_TRANSIT'?(edge.allowed.includes('all')||edge.allowed.includes(a.class)):['green','blue'].includes(edge.difficulty));}
   transfer(from,to,a){
     if(from===to)return [];
     if(a.spawnAccess?.some(e=>e.from===from)){
@@ -73,13 +75,23 @@ export class Mountain {
     if(this.pathCache.has(key))return this.pathCache.get(key);
     const paths=[];
     const visit=(node,path,seen)=>{
+      if(this.generated&&paths.length>500)throw new Error('Imported map has too many complete itineraries; simplify branching before applying.');
       if(this.baseLift[node]){paths.push(path);return;}
+      if(this.generated&&!(this.down[node]?.length)){
+        const choices=this.scenario.active_lifts.map(id=>this.transfer(node,this.lifts[id].base,a)).filter(Boolean).sort((a,b)=>a.reduce((n,e)=>n+e.seconds,0)-b.reduce((n,e)=>n+e.seconds,0));
+        if(choices.length)paths.push([...path,...choices[0]]);return;
+      }
       if(node==='RACE_FINISH'){paths.push([...path,this.walk[node].find(e=>e.to==='W_BASE')]);return;}
       for(const e of this.down[node]??[]){if(!this.allowed(e,a)||seen.has(e.to))continue;visit(e.to,[...path,e],new Set([...seen,e.to]));}
     };
     visit(this.lifts[lift].top,[],new Set());this.pathCache.set(key,paths);return paths;
   }
   candidates(a){
+    if(this.generated){
+      if(a.class==='lapper'&&a.home)return [a.home];
+      const ids=a.preferred??this.scenario.active_lifts;
+      return ids.filter(id=>{const paths=this.itineraries(id,a);return paths.length&&(a.subtype!=='park'||paths.some(p=>p.some(e=>e.difficulty==='park')));});
+    }
     if(a.class==='vacationer')return this.scenario.vacationer_lifts;
     if(a.class==='lapper')return a.subtype==='park'?['L1','L2']:[a.home];
     return a.preferred??this.scenario.active_lifts;
@@ -101,7 +113,7 @@ export class Mountain {
     if(fraction<1e-12||fraction>1-1e-12){a.node=fraction<.5?edge.from:edge.to;return;}
     const elevation=this.nodes[edge.from].elevation_m+(this.nodes[edge.to].elevation_m-this.nodes[edge.from].elevation_m)*fraction;
     this.nodes[id]={id,x:split.point[0],y:split.point[1],elevation_m:elevation,kind:'spawn_point'};a.node=id;
-    a.spawnAccess=[{...edge,id:id+':back',from:id,to:edge.from,points:[...split.before].reverse()},{...edge,id:id+':forward',from:id,to:edge.to,points:split.after}].map(e=>({...e,length:sumLength(e.points),seconds:sumLength(e.points)/this.config.movement.base_transit_meters_per_second}));
+    a.spawnAccess=[{...edge,id:id+':back',from:id,to:edge.from,points:[...split.before].reverse()},{...edge,id:id+':forward',from:id,to:edge.to,points:split.after}].map(e=>({...e,length:this.routeLength(e.points),seconds:this.routeLength(e.points)/this.config.movement.base_transit_meters_per_second}));
   }
 }
 
@@ -137,8 +149,21 @@ export class Simulation {
   queueSize(id){const q=this.queues[id];return q.ids.length-q.head;}
   createAgent(p,opening=false){
     const a={id:this.agents.length,class:p.class,subtype:p.class==='lapper'?p.subtype:null,home:null,run:null,preferred:null,waits:{},memory:{},seen:{},born:this.t,plannedStay:this.closeTime-this.t,departureRequestedAt:null,node:null,state:'BASE_DECISION',since:this.t,counters:{skiing:0,queue:0,uphill:0,transit:0},visits:{},switches:0,laps:0,lastLift:null,route:[],routeIndex:0};
-    if(a.subtype==='race')a.home='L1';
-    if(a.subtype==='other'){
+    if(this.mountain.generated&&a.class==='lapper'){
+      const all=this.mountain.scenario.active_lifts;
+      if(a.subtype==='park'&&!this.mountain.candidates(a).length)a.subtype='other';
+      if(a.subtype==='race'){
+        const support=all.filter(id=>this.mountain.itineraries(id,a).some(p=>p.some(e=>this.mountain.runs[e.parent]?.subtype==='race'))).sort((x,y)=>this.mountain.nodes[this.mountain.lifts[x].base].x-this.mountain.nodes[this.mountain.lifts[y].base].x);
+        if(support.length)a.home=support[0];else a.subtype='other';
+      }
+      if(a.subtype==='other'){
+        const choices=all.flatMap(id=>this.mountain.itineraries(id,a).filter(path=>!path.some(e=>e.difficulty==='park'||this.mountain.runs[e.parent]?.subtype==='race')).map(path=>({id,path})));
+        const fallback=choices.length?choices:all.flatMap(id=>this.mountain.itineraries(id,a).map(path=>({id,path})));
+        if(!fallback.length)throw new Error('No complete itinerary for general lappers');
+        const pick=fallback[Math.floor(p.runU*fallback.length)];a.home=pick.id;a.fixedItinerary=pick.path;a.run=[...new Set(pick.path.map(e=>e.parent))].join('>');
+      }
+    }else if(a.subtype==='race')a.home='L1';
+    if(a.subtype==='other'&&!this.mountain.generated){
       const candidates=[...this.config.population.lapper_other_candidate_runs.always_available,...(this.mountain.scenario.active_lifts.includes('L4')?this.config.population.lapper_other_candidate_runs.if_L4_active:[])];
       a.run=candidates[Math.floor(p.runU*candidates.length)];a.home=this.mountain.runs[a.run].primary_lift;
     }
@@ -195,7 +220,7 @@ export class Simulation {
       const w=a.waits[id]??={total:0,count:0};w.total+=wait;w.count++;
       a.visits[id]=(a.visits[id]??0)+1;a.lastLift=id;this.transition(a,'LIFT_RIDE');
       const l=this.mountain.lifts[id];const from=this.mountain.nodes[l.base],to=this.mountain.nodes[l.top];
-      a.edge={id,from:l.base,to:l.top,points:[[from.x,from.y],[to.x,to.y]],seconds:l.ride_minutes*60,state:'LIFT_RIDE'};a.edgeStart=this.t;a.edgeEnd=this.t+a.edge.seconds;
+      a.edge={id,from:l.base,to:l.top,points:l.polyline??[[from.x,from.y],[to.x,to.y]],seconds:l.ride_minutes*60,state:'LIFT_RIDE'};a.edgeStart=this.t;a.edgeEnd=this.t+a.edge.seconds;
       this.events.push(a.edgeEnd,1,'summit',a.id);
       if(q.head>2048&&q.head*2>q.ids.length){q.ids=q.ids.slice(q.head);q.head=0;}
     }
@@ -205,9 +230,15 @@ export class Simulation {
   descent(a){
     const id=a.lastLift;a.node=this.mountain.lifts[id].top;
     let routes=this.mountain.itineraries(id,a);
-    if(a.subtype==='park')routes=routes.filter(p=>p[0].parent===(id==='L1'?'P01':'P02'));
-    if(a.subtype==='race')routes=routes.filter(p=>p[0].parent==='T01'&&p.some(e=>e.parent==='B10'));
-    if(a.subtype==='other')routes=routes.filter(p=>p.every(e=>e.parent===a.run));
+    if(this.mountain.generated){
+      if(a.subtype==='park')routes=routes.filter(p=>p.some(e=>e.difficulty==='park'));
+      if(a.subtype==='race')routes=routes.filter(p=>p.some(e=>this.mountain.runs[e.parent]?.subtype==='race'));
+      if(a.fixedItinerary)routes=[a.fixedItinerary];
+    }else{
+      if(a.subtype==='park')routes=routes.filter(p=>p[0].parent===(id==='L1'?'P01':'P02'));
+      if(a.subtype==='race')routes=routes.filter(p=>p[0].parent==='T01'&&p.some(e=>e.parent==='B10'));
+      if(a.subtype==='other')routes=routes.filter(p=>p.every(e=>e.parent===a.run));
+    }
     if(!routes.length)throw new Error(`No legal itinerary for ${a.id}/${id}/${a.run}`);
     this.beginRoute(a,routes[Math.floor(this.random()*routes.length)],'descent');
   }
@@ -282,8 +313,8 @@ export class Simulation {
       if(a.state==='QUEUE'&&!seen.has(a.id))throw new Error('Missing queued agent');
       const elapsed=(a.exitedAt??this.t)-a.born;
       if(Math.abs(Object.values(this.counters(a)).reduce((s,x)=>s+x,0)-elapsed)>1e-5)throw new Error('Time conservation');
-      if(a.class==='vacationer'&&(a.visits.L1||a.visits.L2||(['SKI_RUN','SKI_TRAVERSE'].includes(a.state)&&!this.mountain.allowed(a.edge,a))))throw new Error('Vacationer terrain');
-      if(a.subtype==='race'&&Object.keys(a.visits).some(id=>id!=='L1'))throw new Error('Race home');
+      if(a.class==='vacationer'&&((!this.mountain.generated&&(a.visits.L1||a.visits.L2))||(['SKI_RUN','SKI_TRAVERSE'].includes(a.state)&&!this.mountain.allowed(a.edge,a))))throw new Error('Vacationer terrain');
+      if(a.subtype==='race'&&Object.keys(a.visits).some(id=>id!==a.home))throw new Error('Race home');
       if(a.subtype==='other'&&Object.keys(a.visits).some(id=>id!==a.home))throw new Error('Other home');
     }
     return true;

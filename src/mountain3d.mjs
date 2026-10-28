@@ -2,7 +2,7 @@
 // interpolated by planar arc length. This is a view, never a second simulation.
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-import {liftColors} from './palette.mjs';
+import {liftColors,mapLiftColors} from './palette.mjs';
 const classColors={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const trailColors={green:'#68be91',blue:'#65a3d9',black:'#afc3ce',park:'#e5a15e'};
 export const nodeLabel=id=>({W_TOP:'West peak',E_TOP:'East Peak',A_TOP:'Aspen peak',M_TOP:'Meadow top',LODGE:'Main Lodge'})[id]??id.replaceAll('_',' ');
@@ -29,7 +29,7 @@ export function skeletonRoutes(map) {
   for(const t of map.transfers)routes.push({id:t.id,kind:'transfer',name:t.name,points:elevatedPolyline(t.polyline,t.from,t.to,nodes),color:'#6e929f',length:t.centerline_length_m});
   for(const l of map.lifts) {
     const a=nodes[l.base],b=nodes[l.top];
-    routes.push({id:l.id,kind:'lift',name:l.name,points:[[a.x,a.y,a.elevation_m],[b.x,b.y,b.elevation_m]],color:liftColors[l.id],length:l.centerline_length_m});
+    routes.push({id:l.id,kind:'lift',name:l.name,points:elevatedPolyline(l.polyline??[[a.x,a.y],[b.x,b.y]],l.base,l.top,nodes),color:mapLiftColors(map.lifts)[l.id],length:l.centerline_length_m});
   }
   return routes;
 }
@@ -113,6 +113,7 @@ export class Mountain3D {
     this.gyro=gyro;this.body=coneSurface();this.bind();if(gyro)this.bindGyro();
   }
   reset(){this.camera=defaultCamera();this.hover=null;this.onReset(this.camera);}
+  setMap(map){this.map=map;this.routes=skeletonRoutes(map);this.coneRoutes=this.routes.map(r=>({...r,points:subdividePolyline(r.points)}));this.hits=[];this.routeHits=[];this.reset();}
   bindGyro() {
     const el=this.gyro;let drag=null;
     el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);el.focus({preventScroll:true});drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,moved:false};e.preventDefault();});
@@ -240,12 +241,12 @@ export class Mountain3D {
     c.font='10px system-ui';c.textAlign='center';c.textBaseline='middle';
     for(const n of this.map.nodes){
       if(!isConeVisible([n.x,n.y,n.elevation_m],this.camera))continue;
-      const p=project([n.x,n.y,n.elevation_m]),lift=this.map.lifts.find(l=>l.base===n.id),color=lift?liftColors[lift.id]:'#a0bdc8';
+      const p=project([n.x,n.y,n.elevation_m]),lift=this.map.lifts.find(l=>l.base===n.id),color=lift?mapLiftColors(this.map.lifts)[lift.id]:'#a0bdc8';
       if(lift&&activeLifts.has(lift.id)){
         c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fillStyle='#0a1822ee';c.fill();c.strokeStyle=color;c.lineWidth=1.5;c.stroke();c.fillStyle='#f1f6f3';c.font='600 11px system-ui';c.fillText(sim.queueSize(lift.id),p.x,p.y);c.font='10px system-ui';
       }else if(n.kind==='base_lodge'){c.fillStyle='#e7d7ad';c.fillRect(p.x-6,p.y-3,12,10);c.beginPath();c.moveTo(p.x-9,p.y-3);c.lineTo(p.x,p.y-11);c.lineTo(p.x+9,p.y-3);c.closePath();c.fill();}else{c.beginPath();c.arc(p.x,p.y,3.5,0,Math.PI*2);c.fillStyle=color;c.fill();}
-      if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:nodeLabel(n.id),labelY=p.y+(n.kind==='base_lodge'?-24:24);c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,labelY-7,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,labelY);}
-      this.hits.push({...p,type:'node',id:n.id,text:`${lift?lift.id+' · ':''}${nodeLabel(n.id)} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
+      if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:this.map.behavior?.generated?(n.name??nodeLabel(n.id)):nodeLabel(n.id),labelY=p.y+(n.kind==='base_lodge'?-24:24);c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,labelY-7,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,labelY);}
+      this.hits.push({...p,type:'node',id:n.id,text:`${lift?lift.id+' · ':''}${this.map.behavior?.generated?(n.name??nodeLabel(n.id)):nodeLabel(n.id)} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
     }
     c.textAlign='left';c.fillStyle='#7898a5';c.font='10px system-ui';c.fillText(this.camera.cone?'SCHEMATIC CONE WRAP · SHARED SIMULATION':'NODE ELEVATIONS + INTERPOLATED ROUTE HEIGHTS',12,height-15);
     if(this.hover&&!this.hits.some(h=>h.type===this.hover.type&&h.id===this.hover.id)&&!this.routeHits.some(h=>h.type===this.hover.type&&h.id===this.hover.id))this.hover=null;

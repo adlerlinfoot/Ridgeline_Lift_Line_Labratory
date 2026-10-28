@@ -1,0 +1,331 @@
+{
+  "protocol": "ridgeline.topology.v1",
+  "map": {
+    "schema_version": "ridgeline-import-1",
+    "name": "Three lift test mountain",
+    "synthetic": true,
+    "behavior": {
+      "generated": true
+    },
+    "coordinate_system": {
+      "width_px": 1400,
+      "height_px": 960,
+      "meters_per_pixel_xy": 1.590909090909091
+    },
+    "nodes": [
+      {
+        "id": "home",
+        "name": "Lodge",
+        "x": 700,
+        "y": 857.1428571428571,
+        "kind": "base_lodge",
+        "elevation_m": 2350
+      },
+      {
+        "id": "base0",
+        "name": "Base 0",
+        "x": 197.14285714285717,
+        "y": 794.2857142857142,
+        "kind": "lift_base",
+        "elevation_m": 2350
+      },
+      {
+        "id": "peak0",
+        "name": "Peak 0",
+        "x": 197.14285714285717,
+        "y": 165.71428571428572,
+        "kind": "lift_top",
+        "elevation_m": 3100
+      },
+      {
+        "id": "base1",
+        "name": "Base 1",
+        "x": 700,
+        "y": 794.2857142857142,
+        "kind": "lift_base",
+        "elevation_m": 2350
+      },
+      {
+        "id": "peak1",
+        "name": "Peak 1",
+        "x": 700,
+        "y": 165.71428571428572,
+        "kind": "lift_top",
+        "elevation_m": 3100
+      },
+      {
+        "id": "base2",
+        "name": "Base 2",
+        "x": 1202.8571428571427,
+        "y": 794.2857142857142,
+        "kind": "lift_base",
+        "elevation_m": 2350
+      },
+      {
+        "id": "peak2",
+        "name": "Peak 2",
+        "x": 1202.8571428571427,
+        "y": 165.71428571428572,
+        "kind": "lift_top",
+        "elevation_m": 3100
+      }
+    ],
+    "lifts": [
+      {
+        "id": "Chair_0",
+        "name": "Chair 0",
+        "base": "base0",
+        "top": "peak0",
+        "capacity_skiers_per_hour": 600,
+        "ride_minutes": 5,
+        "initially_operational": true,
+        "centerline_length_m": 1000
+      },
+      {
+        "id": "Chair_1",
+        "name": "Chair 1",
+        "base": "base1",
+        "top": "peak1",
+        "capacity_skiers_per_hour": 600,
+        "ride_minutes": 5,
+        "initially_operational": true,
+        "centerline_length_m": 1000
+      },
+      {
+        "id": "Chair_2",
+        "name": "Chair 2",
+        "base": "base2",
+        "top": "peak2",
+        "capacity_skiers_per_hour": 600,
+        "ride_minutes": 5,
+        "initially_operational": true,
+        "centerline_length_m": 1000
+      }
+    ],
+    "runs": [
+      {
+        "id": "Run_0",
+        "name": "Run 0",
+        "difficulty": "green",
+        "subtype": "standard",
+        "start_node": "peak0",
+        "end_node": "base0",
+        "polyline": [
+          [
+            197.14285714285717,
+            165.71428571428572
+          ],
+          [
+            222.2857142857143,
+            480
+          ],
+          [
+            197.14285714285717,
+            794.2857142857142
+          ]
+        ],
+        "centerline_length_m": 1003.1948963187562,
+        "accessible_from_lifts": [
+          "Chair_0",
+          "Chair_1",
+          "Chair_2"
+        ]
+      },
+      {
+        "id": "Run_1",
+        "name": "Run 1",
+        "difficulty": "blue",
+        "subtype": "standard",
+        "start_node": "peak1",
+        "end_node": "base1",
+        "polyline": [
+          [
+            700,
+            165.71428571428572
+          ],
+          [
+            725.1428571428571,
+            480
+          ],
+          [
+            700,
+            794.2857142857142
+          ]
+        ],
+        "centerline_length_m": 1003.1948963187562,
+        "accessible_from_lifts": [
+          "Chair_0",
+          "Chair_1",
+          "Chair_2"
+        ]
+      },
+      {
+        "id": "Run_2",
+        "name": "Run 2",
+        "difficulty": "black",
+        "subtype": "standard",
+        "start_node": "peak2",
+        "end_node": "base2",
+        "polyline": [
+          [
+            1202.8571428571427,
+            165.71428571428572
+          ],
+          [
+            1228,
+            480
+          ],
+          [
+            1202.8571428571427,
+            794.2857142857142
+          ]
+        ],
+        "centerline_length_m": 1003.1948963187562,
+        "accessible_from_lifts": [
+          "Chair_0",
+          "Chair_1",
+          "Chair_2"
+        ]
+      }
+    ],
+    "transfers": [
+      {
+        "id": "WalkA",
+        "name": "WalkA",
+        "mode": "base_transit",
+        "from": "base0",
+        "to": "base1",
+        "bidirectional": true,
+        "allowed_classes": [
+          "all_mountain",
+          "vacationer",
+          "lapper",
+          "mixed"
+        ],
+        "polyline": [
+          [
+            197.14285714285717,
+            794.2857142857142
+          ],
+          [
+            700,
+            794.2857142857142
+          ]
+        ],
+        "centerline_length_m": 800
+      },
+      {
+        "id": "WalkB",
+        "name": "WalkB",
+        "mode": "base_transit",
+        "from": "base1",
+        "to": "base2",
+        "bidirectional": true,
+        "allowed_classes": [
+          "all_mountain",
+          "vacationer",
+          "lapper",
+          "mixed"
+        ],
+        "polyline": [
+          [
+            700,
+            794.2857142857142
+          ],
+          [
+            1202.8571428571427,
+            794.2857142857142
+          ]
+        ],
+        "centerline_length_m": 799.9999999999998
+      },
+      {
+        "id": "LodgeAccess",
+        "name": "LodgeAccess",
+        "mode": "base_transit",
+        "from": "home",
+        "to": "base1",
+        "bidirectional": true,
+        "allowed_classes": [
+          "all_mountain",
+          "vacationer",
+          "lapper",
+          "mixed"
+        ],
+        "polyline": [
+          [
+            700,
+            857.1428571428571
+          ],
+          [
+            700,
+            794.2857142857142
+          ]
+        ],
+        "centerline_length_m": 100.00000000000006
+      }
+    ],
+    "spawn_node": "home",
+    "scenarios": {
+      "imported": {
+        "active_lifts": [
+          "Chair_0",
+          "Chair_1",
+          "Chair_2"
+        ],
+        "inactive_lifts": [],
+        "active_run_ids": [
+          "Run_0",
+          "Run_1",
+          "Run_2"
+        ],
+        "inactive_run_ids": [],
+        "vacationer_lifts": [
+          "Chair_0",
+          "Chair_1",
+          "Chair_2"
+        ]
+      }
+    },
+    "provenance": {
+      "imageWidth": 1000,
+      "imageHeight": 700,
+      "legend": {
+        "corner": "bottom-right",
+        "entries": [
+          {
+            "label": "green",
+            "meaning": "green",
+            "color": "#008800"
+          },
+          {
+            "label": "lift",
+            "meaning": "lift",
+            "color": "#ff0000"
+          }
+        ]
+      },
+      "assumptions": [
+        "Missing elevations will use synthetic relative heights for visualization.",
+        "Missing capacities/ride times use explicit synthetic defaults.",
+        "No park terrain: park-lapper draws fall back to general lappers.",
+        "No designated race: race-lapper draws fall back to general lappers.",
+        "Relative display elevations normalized to 2350–3100m; source elevations retained separately.",
+        "No implicit junctions at visual crossings."
+      ],
+      "defaults": {
+        "metersPerPixel": 2,
+        "capacity": 600,
+        "rideMinutes": 5
+      },
+      "reviewed": true
+    }
+  },
+  "spawnNode": "home",
+  "warnings": [
+    "Missing elevations will use synthetic relative heights for visualization.",
+    "Missing capacities/ride times use explicit synthetic defaults.",
+    "No park terrain: park-lapper draws fall back to general lappers.",
+    "No designated race: race-lapper draws fall back to general lappers."
+  ]
+}

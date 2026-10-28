@@ -42,3 +42,7 @@ No browser surface was available to the session, so rendered desktop/mobile appe
 ## Descriptive repeated-run overlays
 
 42 tests pass. New tests verify that only seeds vary, overlay observations exactly match raw simulation samples, closed-lift handling, plain-text/CSV numeric provenance, shared lift colors and a real overlay worker. DOM integration exercises worker completion, lift/metric controls, observed-range hover, TXT/CSV downloads and cancellation. No forecasting or confidence-interval mechanism is present in the overlay feature. Full rendered browser verification remains unavailable.
+
+## Separate map-import plugin integration
+
+46 host tests pass, including arbitrary-ID maps, novice terrain eligibility, scaling, JSON host validation, generalized overlays/colors and preserved default-map tests. DOM harness covers iframe message handoff from the exact allowed source/origin, imported map rendering, imported overlays/exports and restoring default. The plugin repository separately tests graph compilation and HTTP boundaries. Full rendered browser verification remains unavailable.

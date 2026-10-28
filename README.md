@@ -114,3 +114,11 @@ Use Overlay congestion across runs to run 2–200 independent simulation days (d
 Every run contributes its own thin line. L1 remains red, L2 purple, L3 blue and L4 green via one shared palette used by all views. Switch queue count/estimated wait and toggle lifts to inspect overlaps. Hover reports observed min/max across completed runs at the selected minute, not a confidence interval. The background worker does not change the live simulation. Stop retains only fully completed runs and marks the output partial.
 
 Plain-text (.txt) export contains settings, seeds, capacities, per-run lift summaries and tab-separated minute values. CSV contains the same minute-by-minute queue counts and estimated waits in wide form, with run and seed columns. Closed lifts are blank. Time series cover opening through closing, excluding post-close drain.
+
+## Optional image-to-topology plugin
+
+Image extraction and editing live in the separate private [Ridgeline_Map_Importer](https://github.com/adlerlinfoot/Ridgeline_Map_Importer) repository. With its local server running, click Image → topology plugin. Upload a map, let its image agent read the corner legend, inspect/edit the graph, resolve blocking ambiguities and apply it. You can also import its exported topology JSON. The main app independently validates and preflights the graph before replacing the active map. Restore Ridgeline restores the original topology; source files are never overwritten.
+
+Imported maps use a single all-open imported scenario and arbitrary lift IDs. Class admissibility derives from legal complete itineraries. Missing park/race specialties fall back to general lappers, disclosed in importer warnings. Physical scale, capacity and ride defaults are explicitly supplied in the plugin; 3D elevations remain schematic. Main lodge, continuous path spawns, queue memories, time accounting, population flow, 3D controls and per-lift repeated-run overlays remain supported.
+
+If the two repos are sibling checkouts, Start-Ridgeline.ps1 starts the plugin server automatically when installed. Otherwise use the plugin’s Start-MapImporter.ps1. The plugin is optional; normal Ridgeline runs require neither its server nor Kiro. The connected plugin origin is restricted to http://127.0.0.1:43881 and the known iframe; imported JSON is data, never executable code.

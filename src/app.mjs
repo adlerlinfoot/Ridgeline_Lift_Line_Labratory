@@ -1,8 +1,10 @@
 import {Simulation,csv} from './engine.mjs';
 import {Mountain3D,nodeLabel} from './mountain3d.mjs';
 const $=id=>document.getElementById(id);
-import {liftColors as colors} from './palette.mjs';
+import {liftColors as baseColors,mapLiftColors} from './palette.mjs';
 import {initializeOverlays} from './overlay-ui.mjs';
+import {connectMapImporter} from './import-plugin.mjs';
+let colors={...baseColors},defaultMap,defaultConfig,overlays;
 const classes={all_mountain:'#4fd1b1',vacationer:'#7fb5ff',lapper:'#ffc16b',mixed:'#e0a3ef'};
 const labels={baseline_3_lifts:'3 lifts · baseline',four_lift_capacity_control:'4 lifts · vacationers on L3',four_lift_intervention:'4 lifts · expanded access'};
 const fmt=(x,d=0)=>x==null?'—':Number(x).toLocaleString(undefined,{maximumFractionDigits:d});
@@ -24,9 +26,9 @@ function drawMap(){
   const active=new Set(sim.mountain.scenario.active_run_ids);
   for(const r of map.runs){const color={green:'#68be91',blue:'#65a3d9',black:'#9aaeb8',park:'#e5a15e'}[r.difficulty];const path=svg('polyline',{points:r.polyline.map(p=>p.join(',')).join(' '),fill:'none',stroke:active.has(r.id)?color:'#33464d','stroke-width':r.difficulty==='park'?6:4,'stroke-linejoin':'round',opacity:active.has(r.id)?.9:.45});path.append(svg('title',{},`${r.id} · ${r.name} · ${r.difficulty}${active.has(r.id)?'':' · closed'}`));root.append(path);}
   for(const t of map.transfers)root.append(svg('polyline',{points:t.polyline.map(p=>p.join(',')).join(' '),fill:'none',stroke:'#637c86','stroke-width':3,'stroke-dasharray':'7 7'}));
-  for(const l of map.lifts){const a=sim.mountain.nodes[l.base],b=sim.mountain.nodes[l.top],open=sim.mountain.scenario.active_lifts.includes(l.id);root.append(svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:open?colors[l.id]:'#42565e','stroke-width':7}));for(const n of [a,b])root.append(svg('circle',{cx:n.x,cy:n.y,r:10,fill:'#182d36',stroke:open?colors[l.id]:'#42565e','stroke-width':3}));root.append(svg('text',{x:a.x,y:a.y+43,fill:open?colors[l.id]:'#71858e','font-size':20,'font-family':'system-ui','text-anchor':'middle'},`${l.id} · ${l.name.split(' ')[0]}`));root.append(svg('text',{x:b.x,y:b.y-22,fill:'#a8bec6','font-size':15,'font-family':'system-ui','text-anchor':'middle'},nodeLabel(l.top)));}
-  for(const n of map.nodes.filter(n=>!n.kind.startsWith('lift'))){if(n.kind==='base_lodge'){root.append(svg('path',{d:`M ${n.x-16} ${n.y-3} L ${n.x} ${n.y-19} L ${n.x+16} ${n.y-3} Z M ${n.x-11} ${n.y-3} H ${n.x+11} V ${n.y+13} H ${n.x-11} Z`,fill:'#e7d7ad'}));root.append(svg('text',{x:n.x,y:n.y+34,fill:'#e7d7ad','font-size':18,'font-family':'system-ui','text-anchor':'middle'},'Main Lodge · spawn'));continue;}root.append(svg('circle',{cx:n.x,cy:n.y,r:5,fill:'#a5b9bf'}));root.append(svg('text',{x:n.x+10,y:n.y-12,fill:'#77929d','font-size':12,'font-family':'system-ui'},nodeLabel(n.id)));}
-  $('map-scenario').textContent=sim.mountain.scenario.active_lifts.includes('L4')?'L4 OPEN · 20 RUNS':'L4 CLOSED · 14 RUNS';
+  for(const l of map.lifts){const a=sim.mountain.nodes[l.base],b=sim.mountain.nodes[l.top],open=sim.mountain.scenario.active_lifts.includes(l.id);root.append(l.polyline?svg('polyline',{points:l.polyline.map(p=>p.join(',')).join(' '),fill:'none',stroke:open?colors[l.id]:'#42565e','stroke-width':7}):svg('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:open?colors[l.id]:'#42565e','stroke-width':7}));for(const n of [a,b])root.append(svg('circle',{cx:n.x,cy:n.y,r:10,fill:'#182d36',stroke:open?colors[l.id]:'#42565e','stroke-width':3}));root.append(svg('text',{x:a.x,y:a.y+43,fill:open?colors[l.id]:'#71858e','font-size':20,'font-family':'system-ui','text-anchor':'middle'},`${l.id} · ${l.name.split(' ')[0]}`));root.append(svg('text',{x:b.x,y:b.y-22,fill:'#a8bec6','font-size':15,'font-family':'system-ui','text-anchor':'middle'},map.behavior?.generated?(b.name??nodeLabel(l.top)):nodeLabel(l.top)));}
+  for(const n of map.nodes.filter(n=>!n.kind.startsWith('lift'))){if(n.kind==='base_lodge'){root.append(svg('path',{d:`M ${n.x-16} ${n.y-3} L ${n.x} ${n.y-19} L ${n.x+16} ${n.y-3} Z M ${n.x-11} ${n.y-3} H ${n.x+11} V ${n.y+13} H ${n.x-11} Z`,fill:'#e7d7ad'}));root.append(svg('text',{x:n.x,y:n.y+34,fill:'#e7d7ad','font-size':18,'font-family':'system-ui','text-anchor':'middle'},'Main Lodge · spawn'));continue;}root.append(svg('circle',{cx:n.x,cy:n.y,r:5,fill:'#a5b9bf'}));root.append(svg('text',{x:n.x+10,y:n.y-12,fill:'#77929d','font-size':12,'font-family':'system-ui'},map.behavior?.generated?(n.name??nodeLabel(n.id)):nodeLabel(n.id)));}
+  $('map-scenario').textContent=map.behavior?.generated?`${map.lifts.length} LIFTS · ${map.runs.length} RUN SEGMENTS`:sim.mountain.scenario.active_lifts.includes('L4')?'L4 OPEN · 20 RUNS':'L4 CLOSED · 14 RUNS';
 }
 function drawAgents(){
   const c=$('agents').getContext('2d');c.clearRect(0,0,1400,960);positions=[];
@@ -48,7 +50,7 @@ function render(){
   drawAgents();const r=sim.summary();const mins=Math.floor(sim.t/60),hh=9+Math.floor(mins/60),mm=mins%60;
   $('clock').textContent=`${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
   $('elapsed').textContent=`${fmt(sim.t/60,1)} / ${sim.options.dayMinutes} operating minutes`;
-  $('phase').textContent=sim.done?'Complete · all skiers exited':sim.closed?'Closed · finishing safe routes':running?(sim.options.mode==='arrival'?(sim.t<sim.flowSwitchTime?'Arrivals · ':'Departures · '):'Running · ')+labels[sim.options.scenario]:locked?'Paused':'Ready · opening rush';
+  $('phase').textContent=sim.done?'Complete · all skiers exited':sim.closed?'Closed · finishing safe routes':running?(sim.options.mode==='arrival'?(sim.t<sim.flowSwitchTime?'Arrivals · ':'Departures · '):'Running · ')+(labels[sim.options.scenario]??map.name):locked?'Paused':'Ready · opening rush';
   $('active').textContent=fmt(r.active);$('waiting').textContent=fmt(Object.keys(sim.queues).reduce((s,id)=>s+sim.queueSize(id),0));$('boarded').textContent=fmt(Object.values(r.perLift).reduce((s,l)=>s+l.boarded,0));$('switches').textContent=fmt(r.switches);
   $('lift-cards').replaceChildren(...map.lifts.map(l=>{const e=document.createElement('div'),open=sim.mountain.scenario.active_lifts.includes(l.id);e.className='lift-row';e.style.setProperty('--c',colors[l.id]);const strong=document.createElement('strong');strong.textContent=`${l.id} · ${l.name.split(' ')[0]}`;const values=document.createElement('div');values.className='values';const b=document.createElement('b');b.textContent=open?fmt(sim.queueSize(l.id)):'—';const span=document.createElement('span');span.textContent=open?`${fmt(sim.queueSize(l.id)/(l.capacity_skiers_per_hour/60),1)}m`:'closed';values.append(b,span);const sub=document.createElement('small');sub.textContent=`${l.capacity_skiers_per_hour}/h · ${l.ride_minutes}m ride · queue σ ${fmt(r.perLift[l.id].queueStandardDeviation,1)}`;e.append(strong,values,sub);return e;}));
   const states={};for(const aid of sim.active){const state=sim.agents[aid].state;states[state]=(states[state]??0)+1;}
@@ -66,6 +68,7 @@ function frame(now){
 }
 try{
   [map,config]=await Promise.all(['resort-map.json','MODEL_CONFIG.json'].map(async f=>{const r=await fetch(f);if(!r.ok)throw new Error(`Could not load ${f}`);return r.json();}));
+  defaultMap=structuredClone(map);defaultConfig=structuredClone(config);
   view3d=new Mountain3D($('mountain-3d'),map,{gyro:$('orbit-gyro'),onReset:camera=>{$('height-scale').value=camera.vertical;$('height-value').textContent=camera.vertical.toFixed(1)+'×';$('cone-wrap').checked=camera.cone;},onSelect:id=>{selected=id;render();},onHover:text=>{$('three-help').textContent=text;}});
   reset();
   $('play').onclick=()=>{if(sim.done)return;locked=true;running=!running;setSettings();$('play').textContent=running?'Pause':'Resume';};
@@ -85,6 +88,15 @@ try{
   $('export-json').onclick=()=>download(`ridgeline-${sim.options.seed}.json`,JSON.stringify(runExport(),null,2),'application/json');
   $('export-series').onclick=()=>download(`ridgeline-queues-${sim.options.seed}.csv`,csv(sim.samples),'text/csv');
   $('export-agents').onclick=()=>download(`ridgeline-skiers-${sim.options.seed}.csv`,csv(sim.agentRows()),'text/csv');
-  initializeOverlays({map,config,getOptions:options,download});
+  overlays=initializeOverlays({map,config,getOptions:options,download});
+  function mapContext(next){
+    running=false;locked=false;map=next.map;config=next.config;colors=mapLiftColors(map.lifts);
+    $('scenario').replaceChildren(...Object.keys(map.scenarios).map(id=>{const o=document.createElement('option');o.value=id;o.textContent=labels[id]??map.name;return o;}));
+    $('scenario').value=map.behavior?.generated?'imported':'baseline_3_lifts';
+    $('loaded-map-name').textContent=map.name;$('map-restore').disabled=!map.behavior?.generated;
+    $('live-lift-legend').replaceChildren(...map.lifts.map(l=>{const span=document.createElement('span'),i=document.createElement('i');i.style.setProperty('--c',colors[l.id]);span.append(i,document.createTextNode(l.id+' · '+l.name));return span;}));
+    view3d.setMap(map);overlays.setContext({map,config});reset();
+  }
+  connectMapImporter({getConfig:()=>defaultConfig,getOptions:options,onApply:mapContext,onRestore:()=>{mapContext({map:structuredClone(defaultMap),config:structuredClone(defaultConfig)});$('map-plugin-status').textContent='Original Ridgeline topology restored.';}});
   requestAnimationFrame(frame);
 }catch(e){message(`Could not start: ${e.message}. Serve this folder over HTTP; do not open index.html as a file.`);}

@@ -14,5 +14,8 @@ if (-not $response) {
   } while (-not $response -and (Get-Date) -lt $deadline)
   if (-not $response) { throw 'Ridgeline did not start at http://127.0.0.1:43880/.' }
 }
+# Optional separately checked-out importer plugin. No extraction code is copied into this repo.
+$importerStart = Join-Path (Split-Path $project -Parent) 'Ridgeline_Map_Importer\Start-MapImporter.ps1'
+if (Test-Path -LiteralPath $importerStart) { try { & $importerStart -NoBrowser } catch { Write-Warning ('Optional map importer: ' + $_.Exception.Message) } }
 Write-Host 'Ridgeline: http://127.0.0.1:43880/'
 if (-not $NoBrowser) { Start-Process 'http://127.0.0.1:43880/' }

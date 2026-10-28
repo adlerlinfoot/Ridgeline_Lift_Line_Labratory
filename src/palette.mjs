@@ -1,1 +1,2 @@
 export const liftColors={L1:'#ff666b',L2:'#c7a1ff',L3:'#61c9ed',L4:'#76d7a5'};
+export function mapLiftColors(lifts){const extra=['#ff666b','#c7a1ff','#61c9ed','#76d7a5','#f5d778','#f6a8ce','#a5d5cc','#9aaeff','#ddaf80','#b5dd8e','#ee8d9c','#a9c2d1','#d7b9ee','#96d5f5','#f4c4a7','#ddd990'];const conventional=lifts.every(l=>l.id in liftColors);return Object.fromEntries(lifts.map((l,i)=>[l.id,conventional?liftColors[l.id]:extra[i%extra.length]]));}

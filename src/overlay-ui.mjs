@@ -1,9 +1,10 @@
 import {overlayJobs,overlayCSV,overlayText} from './overlays.mjs';
-import {liftColors} from './palette.mjs';
+import {liftColors,mapLiftColors} from './palette.mjs';
 
 export function initializeOverlays({map,config,getOptions,download}){
   const $=id=>document.getElementById(id),canvas=$('overlay-chart');
   let worker=null,data=null,hover=null,plot=null;
+  function legend(){const box=$('overlay-lift-legend');box.replaceChildren(...map.lifts.map(l=>{const label=document.createElement('label'),input=document.createElement('input'),i=document.createElement('i');label.style.setProperty('--c',mapLiftColors(map.lifts)[l.id]);input.type='checkbox';input.checked=true;input.dataset.overlayLift=l.id;input.onchange=draw;label.append(input,i,document.createTextNode(l.id+' · '+l.name));return label;}));}
   const selected=()=>[...document.querySelectorAll('[data-overlay-lift]:checked')].map(el=>el.dataset.overlayLift);
   function draw(){
     const rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(300,rect.width),h=340;
@@ -17,7 +18,7 @@ export function initializeOverlays({map,config,getOptions,download}){
     // Every individual run remains visible; lift identity alone determines color.
     for(const run of runs)for(const id of ids){
       if(!run.activeLifts.includes(id))continue;
-      c.strokeStyle=liftColors[id];c.globalAlpha=Math.max(.1,Math.min(.65,2.5/Math.sqrt(runs.length||1)));c.lineWidth=1.1;c.beginPath();let started=false;
+      c.strokeStyle=mapLiftColors(map.lifts)[id];c.globalAlpha=Math.max(.1,Math.min(.65,2.5/Math.sqrt(runs.length||1)));c.lineWidth=1.1;c.beginPath();let started=false;
       for(const row of run.series){const y=row[metric][id];if(y==null)continue;if(started)c.lineTo(px(row.minutes),py(y));else{c.moveTo(px(row.minutes),py(y));started=true;}}c.stroke();
     }
     c.globalAlpha=1;
@@ -57,5 +58,6 @@ export function initializeOverlays({map,config,getOptions,download}){
     }
     hover={minute};$('overlay-hover').textContent=`Minute ${minute} · observed min–max across completed runs · ${parts.join(' / ')}${metric==='wait'?' minutes':''}`;draw();
   });
-  canvas.addEventListener('pointerleave',()=>{hover=null;draw();});window.addEventListener('resize',draw);draw();
+  canvas.addEventListener('pointerleave',()=>{hover=null;draw();});window.addEventListener('resize',draw);legend();draw();
+  return {setContext(next){finish();map=next.map;config=next.config;data=null;hover=null;exportsEnabled();$('overlay-status').textContent='Map changed. Ready to run overlays for the new topology.';$('overlay-parameters').textContent=map.name;legend();draw();}};
 }
