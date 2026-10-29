@@ -1,3 +1,4 @@
+import {mountLiftSettings} from './lift-settings.mjs';
 import {Simulation,csv} from './engine.mjs';
 import {Mountain3D,nodeLabel} from './mountain3d.mjs';
 const $=id=>document.getElementById(id);
@@ -70,9 +71,10 @@ try{
   [map,config]=await Promise.all(['resort-map.json','MODEL_CONFIG.json'].map(async f=>{const r=await fetch(f);if(!r.ok)throw new Error(`Could not load ${f}`);return r.json();}));
   defaultMap=structuredClone(map);defaultConfig=structuredClone(config);
   view3d=new Mountain3D($('mountain-3d'),map,{gyro:$('orbit-gyro'),onReset:camera=>{$('height-scale').value=camera.vertical;$('height-value').textContent=camera.vertical.toFixed(1)+'×';$('cone-wrap').checked=camera.cone;},onSelect:id=>{selected=id;render();},onHover:text=>{$('three-help').textContent=text;}});
-  reset();
+  const liftControls=()=>mountLiftSettings({container:$('individual-lifts'),getMap:()=>map,isLocked:()=>locked,onChange:()=>{reset();overlays?.setContext({map,config});}});
+  liftControls();reset();
   $('play').onclick=()=>{if(sim.done)return;locked=true;running=!running;setSettings();$('play').textContent=running?'Pause':'Resume';};
-  $('reset').onclick=reset;document.querySelectorAll('.setting').forEach(e=>e.onchange=()=>{if(!locked)reset();});
+  $('reset').onclick=reset;document.querySelectorAll('.setting').forEach(e=>{if(!e.closest('#individual-lifts'))e.onchange=()=>{if(!locked)reset();};});
   $('lodge-percent').oninput=()=>{$('lodge-percent-value').textContent=$('lodge-percent').value+'%';};
   $('chart-metric').onchange=chart;window.addEventListener('resize',chart);
   document.querySelectorAll('[data-view]').forEach(button=>{if(button.tagName!=='BUTTON')return;button.onclick=()=>{
@@ -95,8 +97,8 @@ try{
     $('scenario').value=map.behavior?.generated?'imported':'baseline_3_lifts';
     $('loaded-map-name').textContent=map.name;$('map-restore').disabled=!map.behavior?.generated;
     $('live-lift-legend').replaceChildren(...map.lifts.map(l=>{const span=document.createElement('span'),i=document.createElement('i');i.style.setProperty('--c',colors[l.id]);span.append(i,document.createTextNode(l.id+' · '+l.name));return span;}));
-    view3d.setMap(map);overlays.setContext({map,config});reset();
+    view3d.setMap(map);overlays.setContext({map,config});liftControls();reset();
   }
-  connectMapImporter({getConfig:()=>defaultConfig,getOptions:options,onApply:mapContext,onRestore:()=>{mapContext({map:structuredClone(defaultMap),config:structuredClone(defaultConfig)});$('map-plugin-status').textContent='Original Ridgeline topology restored.';}});
+  connectMapImporter({getMap:()=>map,getConfig:()=>defaultConfig,getOptions:options,onApply:mapContext,onRestore:()=>{mapContext({map:structuredClone(defaultMap),config:structuredClone(defaultConfig)});$('map-plugin-status').textContent='Original Ridgeline topology restored.';}});
   requestAnimationFrame(frame);
 }catch(e){message(`Could not start: ${e.message}. Serve this folder over HTTP; do not open index.html as a file.`);}

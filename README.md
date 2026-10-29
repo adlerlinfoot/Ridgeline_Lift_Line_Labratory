@@ -122,3 +122,14 @@ Image extraction and editing live in the separate private [Ridgeline_Map_Importe
 Imported maps use a single all-open imported scenario and arbitrary lift IDs. Class admissibility derives from legal complete itineraries. Missing park/race specialties fall back to general lappers, disclosed in importer warnings. Physical scale, capacity and ride defaults are explicitly supplied in the plugin; 3D elevations remain schematic. Main lodge, continuous path spawns, queue memories, time accounting, population flow, 3D controls and per-lift repeated-run overlays remain supported.
 
 If the two repos are sibling checkouts, Start-Ridgeline.ps1 starts the plugin server automatically when installed. Otherwise use the plugin’s Start-MapImporter.ps1. The plugin is optional; normal Ridgeline runs require neither its server nor Kiro. The connected plugin origin is restricted to http://127.0.0.1:43881 and the known iframe; imported JSON is data, never executable code.
+
+
+## Individual lifts and saved mountains
+
+Expand **Individual lift settings**. Each lift has integer seats-per-chair and chair-count sliders plus full cable revolution minutes. Ride time is half a revolution; capacity is `chairs × seats × 60 / revolution_minutes`. Boarding now admits a FIFO group per arriving chair. Existing maps retain their original capacity-paced single-seat behavior until configured; the displayed default chair count is a synthetic estimate. Settings lock after Start and affect live runs, overlays and exports.
+
+Import one or multiple downloaded topology JSON files to populate **Saved mountain**. Imported/applied mountains are saved in this browser automatically; **Save mountain** stores later lift-setting changes. **Download current topology** produces a portable JSON backup including those settings. Saved names identify entries (saving the same name replaces that entry); browser storage is local to this origin and clearing it removes the library. Storage failures are reported while the applied mountain remains usable. The bundled original remains available through Restore Ridgeline.
+
+**Edit current topology** reopens an imported/applied mountain in the separate editor; verify and apply to commit a revision. New exports retain the source draft. Older normalized topology files reconstruct an editable graph. Background images are retained separately in the importer's local browser storage when space permits, and are not embedded in portable topology files. A missing background does not prevent graph editing. The editor/plugin server must be running. Browsers cannot scan Downloads automatically: import existing topology files once to add them to the selector.
+
+For the DOM integration regression (with canvas calls mocked), install the sibling Map Importer's dev dependencies and run: node tests/importer-ui-check.mjs. This checks lift controls, saved-mountain selection, topology re-editing, overlays and exports.

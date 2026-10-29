@@ -9,7 +9,7 @@ export function prepareImportedMap(bundle,baseConfig,options){
   const nodes=new Set();for(const n of map.nodes){if(!identifier(n.id)||nodes.has(n.id)||![n.x,n.y,n.elevation_m].every(Number.isFinite)||n.x<0||n.x>1400||n.y<0||n.y>960||n.elevation_m<0||n.elevation_m>9000)throw new Error('Invalid imported node');nodes.add(n.id);}
   const ids=new Set();for(const e of [...map.lifts,...map.runs,...map.transfers]){
     if(!identifier(e.id)||ids.has(e.id)||!nodes.has(e.base??e.start_node??e.from)||!nodes.has(e.top??e.end_node??e.to))throw new Error('Invalid imported edge or endpoint');ids.add(e.id);
-    if(e.base){if(!Number.isFinite(e.capacity_skiers_per_hour)||e.capacity_skiers_per_hour<1||e.capacity_skiers_per_hour>10000||!Number.isFinite(e.ride_minutes)||e.ride_minutes<=0||e.ride_minutes>60)throw new Error('Invalid imported lift parameters');if(map.nodes.find(n=>n.id===e.base).kind!=='lift_base'||map.nodes.find(n=>n.id===e.top).kind!=='lift_top')throw new Error('Invalid lift node kinds');if(e.polyline){const a=map.nodes.find(n=>n.id===e.base),b=map.nodes.find(n=>n.id===e.top);if(!Array.isArray(e.polyline)||e.polyline.length<2||e.polyline.length>250||e.polyline.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite)||p[0]<0||p[0]>1400||p[1]<0||p[1]>960)||Math.hypot(e.polyline[0][0]-a.x,e.polyline[0][1]-a.y)>1e-5||Math.hypot(e.polyline.at(-1)[0]-b.x,e.polyline.at(-1)[1]-b.y)>1e-5)throw new Error('Invalid lift geometry');}}
+    if(e.base){if(e.seats_per_chair!=null&&(!Number.isInteger(e.seats_per_chair)||e.seats_per_chair<1||e.seats_per_chair>12))throw new Error('Invalid seats per chair');if(!Number.isFinite(e.capacity_skiers_per_hour)||e.capacity_skiers_per_hour<1||e.capacity_skiers_per_hour>720000||!Number.isFinite(e.ride_minutes)||e.ride_minutes<=0||e.ride_minutes>60)throw new Error('Invalid imported lift parameters');if(map.nodes.find(n=>n.id===e.base).kind!=='lift_base'||map.nodes.find(n=>n.id===e.top).kind!=='lift_top')throw new Error('Invalid lift node kinds');if(e.polyline){const a=map.nodes.find(n=>n.id===e.base),b=map.nodes.find(n=>n.id===e.top);if(!Array.isArray(e.polyline)||e.polyline.length<2||e.polyline.length>250||e.polyline.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite)||p[0]<0||p[0]>1400||p[1]<0||p[1]>960)||Math.hypot(e.polyline[0][0]-a.x,e.polyline[0][1]-a.y)>1e-5||Math.hypot(e.polyline.at(-1)[0]-b.x,e.polyline.at(-1)[1]-b.y)>1e-5)throw new Error('Invalid lift geometry');}}
     else{
       if(!Array.isArray(e.polyline)||e.polyline.length<2||e.polyline.length>250||e.polyline.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite)||p[0]<0||p[0]>1400||p[1]<0||p[1]>960))throw new Error('Invalid imported polyline');
       if(e.start_node&&!['green','blue','black','park'].includes(e.difficulty))throw new Error('Invalid imported difficulty');
@@ -34,16 +34,28 @@ export function prepareImportedMap(bundle,baseConfig,options){
   return {map,config};
 }
 
-export function connectMapImporter({getConfig,getOptions,onApply,onRestore}){
+export function connectMapImporter({getMap,getConfig,getOptions,onApply,onRestore}){
   const $=id=>document.getElementById(id),dialog=$('map-import-dialog'),frame=$('map-import-frame');
-  $('map-import-open').onclick=()=>{if(!frame.getAttribute('src'))frame.src=importerOrigin;dialog.showModal();};
+  const storageKey='ridgeline-mountains-v1';let library=[],currentBundle=null;
+  try{library=JSON.parse(localStorage.getItem(storageKey)||'[]');if(!Array.isArray(library))library=[];}catch{library=[];}
+  const refresh=()=>{$('mountain-library').replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent='Choose a saved mountain';$('mountain-library').append(empty);library.forEach((b,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=b.map?.name||'Unnamed mountain';$('mountain-library').append(o);});};refresh();
+  function snapshot(){const map=structuredClone(getMap());if(!map.behavior?.generated)throw new Error('The original mountain is available through Restore Ridgeline. Import a topology to save an editable mountain.');return {...currentBundle,protocol:'ridgeline.topology.v1',map,spawnNode:map.spawn_node??getConfig().spawning.spawn_node};}
+  function remember(bundle){const index=library.findIndex(b=>b.map?.name===bundle.map.name);const next=structuredClone(library);if(index<0)next.push(bundle);else next[index]=bundle;if(next.length>30)throw new Error('Mountain library is full (30). Download a backup.');localStorage.setItem(storageKey,JSON.stringify(next));library=next;refresh();}
+  $('map-save').onclick=()=>{try{remember(snapshot());$('map-plugin-status').textContent='Mountain saved in this browser, including current lift settings.';}catch(e){$('map-plugin-status').textContent=e.message;}};
+  $('map-download').onclick=()=>{try{const b=snapshot(),url=URL.createObjectURL(new Blob([JSON.stringify(b,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=b.map.name.replace(/[^a-z0-9_-]/gi,'_')+'-topology.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){$('map-plugin-status').textContent=e.message;}};
+  let editPending=false;
+  const sendEdit=()=>{if(editPending&&frame.contentWindow)frame.contentWindow.postMessage({type:'ridgeline.topology.edit',bundle:snapshot()},importerOrigin);};
+  frame.addEventListener('load',sendEdit);
+  $('map-edit').onclick=()=>{try{snapshot();editPending=true;if(!frame.getAttribute('src'))frame.src=importerOrigin;dialog.showModal();sendEdit();}catch(e){$('map-plugin-status').textContent=e.message;}};
+  $('mountain-library').onchange=async()=>{const value=$('mountain-library').value;if(value==='')return;try{await apply(structuredClone(library[Number(value)]));}catch(e){$('map-plugin-status').textContent=e.message;}};
+  $('map-import-open').onclick=()=>{editPending=false;if(!frame.getAttribute('src'))frame.src=importerOrigin;dialog.showModal();};
   $('map-import-close').onclick=()=>dialog.close();
   dialog.addEventListener('close',()=>{if(frame.contentWindow)frame.contentWindow.postMessage({type:'ridgeline.importer.cancel'},importerOrigin);});
   $('map-restore').onclick=()=>onRestore();
-  async function apply(bundle){const prepared=prepareImportedMap(bundle,getConfig(),getOptions());await onApply(prepared);$('map-plugin-status').textContent=`Loaded ${prepared.map.name}: ${prepared.map.lifts.length} lifts, ${prepared.map.runs.length} run segments. Changes apply to a new run.`;dialog.close();}
+  async function apply(bundle){const prepared=prepareImportedMap(bundle,getConfig(),getOptions());await onApply(prepared);currentBundle=structuredClone(bundle);editPending=false;let saved='';try{remember(snapshot());}catch(e){saved=' Browser save failed: '+e.message;}$('map-plugin-status').textContent=`Loaded ${prepared.map.name}: ${prepared.map.lifts.length} lifts, ${prepared.map.runs.length} run segments. Changes apply to a new run.${saved}`;dialog.close();}
   window.addEventListener('message',async event=>{
     if(event.origin!==importerOrigin||event.source!==frame.contentWindow||event.data?.type!=='ridgeline.topology.v1')return;
     try{await apply(event.data.bundle);frame.contentWindow.postMessage({type:'ridgeline.topology.result',ok:true},importerOrigin);}catch(e){frame.contentWindow.postMessage({type:'ridgeline.topology.result',ok:false,error:e.message},importerOrigin);$('map-plugin-status').textContent=e.message;}
   });
-  $('map-import-file').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>3e6)throw new Error('Topology file too large');await apply(JSON.parse(await file.text()));}catch(e){$('map-plugin-status').textContent=e.message;}finally{event.target.value='';}};
+  $('map-import-file').onchange=async event=>{try{for(const file of event.target.files){if(file.size>3e6)throw new Error('Topology file too large');await apply(JSON.parse(await file.text()));}}catch(e){$('map-plugin-status').textContent=e.message;}finally{event.target.value='';}};
 }

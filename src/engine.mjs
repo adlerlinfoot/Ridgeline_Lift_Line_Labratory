@@ -144,7 +144,7 @@ export class Simulation {
       t=this.flowSwitchTime;while(true){t+=-Math.log(1-this.random())*60/this.options.arrivalRate;if(t>=this.closeTime)break;this.events.push(t,2,'departure',this.random());}
     }
     this.events.push(this.closeTime,0,'close');
-    for(const id of this.mountain.scenario.active_lifts){const interval=3600/this.mountain.lifts[id].capacity_skiers_per_hour;this.events.push(interval,3,'board',id);}
+    for(const id of this.mountain.scenario.active_lifts){const interval=3600*(this.mountain.lifts[id].seats_per_chair??1)/this.mountain.lifts[id].capacity_skiers_per_hour;this.events.push(interval,3,'board',id);}
     const opening=profiles.filter(p=>p.time===0).map(p=>this.createAgent(p,true));
     // Decisions are simultaneous against zero opening queues. FIFO admission order is seeded-random.
     const choices=opening.map(a=>[a,this.chooseLift(a,true)]);
@@ -222,7 +222,7 @@ export class Simulation {
   board(id){
     if(this.closed)return;
     const q=this.queues[id];
-    if(this.queueSize(id)){
+    for(let seat=0;seat<(this.mountain.lifts[id].seats_per_chair??1)&&this.queueSize(id);seat++){
       this.updateArea(id);const a=this.agents[q.ids[q.head++]];q.boarded++;
       const wait=this.t-a.queuedAt;q.waitTotal+=wait;q.waitCount++;q.maxWait=Math.max(q.maxWait,wait);
       const w=a.waits[id]??={total:0,count:0};w.total+=wait;w.count++;
@@ -232,7 +232,7 @@ export class Simulation {
       this.events.push(a.edgeEnd,1,'summit',a.id);
       if(q.head>2048&&q.head*2>q.ids.length){q.ids=q.ids.slice(q.head);q.head=0;}
     }
-    const next=this.t+3600/this.mountain.lifts[id].capacity_skiers_per_hour;
+    const next=this.t+3600*(this.mountain.lifts[id].seats_per_chair??1)/this.mountain.lifts[id].capacity_skiers_per_hour;
     if(next<this.closeTime)this.events.push(next,3,'board',id);
   }
   descent(a){
