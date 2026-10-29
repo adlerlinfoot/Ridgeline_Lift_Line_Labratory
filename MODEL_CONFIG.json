@@ -79,9 +79,12 @@
     "initial_observation": "all active lift queues at spawn",
     "refresh_policy": "refresh only at physical lift base visit (before decision at current lift and on committed arrival at chosen lift)",
     "remote_state_visibility": "none after spawn unless physically visited",
-    "ties": "uniform seeded random among equal minimum-cost candidate lifts",
+    "ties": "uniform seeded random among equal maximum-ratio candidate lifts",
     "tie_epsilon_minutes": 1e-09,
-    "commitment": "do not reconsider destination until after completion of a downhill itinerary"
+    "commitment": "do not reconsider destination until after completion of a downhill itinerary",
+    "objective": "maximize expected_ski_minutes / (travel_minutes_to_lift + last_observed_queue_wait_minutes + lift_ride_minutes)",
+    "tie_epsilon_ratio": 1e-09,
+    "ski_time_estimate": "mean SKI_RUN minutes across equally likely legal itineraries; SKI_TRAVERSE remains transit"
   },
   "queues": {
     "discipline": "FIFO",

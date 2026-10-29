@@ -15,3 +15,10 @@ export function preferredLifts(waits, count = 2, random = () => 0.999999) {
   }
   return entries.slice(0,count).map(([id])=>id);
 }
+
+export function maximumRatioChoice(candidates,random,epsilon=1e-9){
+ const valid=candidates.filter(x=>Number.isFinite(x.skiMinutes)&&x.skiMinutes>=0&&Number.isFinite(x.overheadMinutes)&&x.overheadMinutes>0).map(x=>({...x,score:x.skiMinutes/x.overheadMinutes}));
+ if(!valid.length)throw new Error('No feasible lift');
+ const best=Math.max(...valid.map(x=>x.score)),tied=valid.filter(x=>Math.abs(x.score-best)<=epsilon);
+ return tied[Math.floor(random()*tied.length)].id;
+}

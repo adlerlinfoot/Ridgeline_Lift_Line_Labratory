@@ -158,3 +158,14 @@ test('non-lodge path spawning preserves invariants across every full-day scenari
     const s=new Simulation(map,config,{lodgePercent:35,mode,scenario,initialAgents:150});while(!s.done){s.step(60);s.assertInvariants();}
   }
 });
+
+test('lift selection uses mean legal skiing time and stale wait in the overhead denominator',()=>{
+ const s=new Simulation(map,config,{initialAgents:0});const a={class:'all_mountain',node:'here',memory:{short:0,long:0}};
+ s.mountain.candidates=()=>['short','long'];s.mountain.lifts={short:{base:'a',ride_minutes:2,capacity_skiers_per_hour:60},long:{base:'b',ride_minutes:4,capacity_skiers_per_hour:60}};
+ s.mountain.transfer=()=>[{seconds:60}];s.mountain.itineraries=id=>id==='short'?[[{state:'SKI_RUN',seconds:120}]]:[[{state:'SKI_RUN',seconds:360},{state:'SKI_TRAVERSE',seconds:600}],[{state:'SKI_RUN',seconds:600}]];
+ assert.equal(s.chooseLift(a,true),'long');a.memory.long=20;assert.equal(s.chooseLift(a,true),'short');assert.equal(a.memory.long,20);
+ a.memory.long=0;s.mountain.itineraries=id=>id==='short'?[[{state:'SKI_RUN',seconds:240}]]:[[{state:'SKI_RUN',seconds:0},{state:'SKI_TRAVERSE',seconds:3600}],[{state:'SKI_RUN',seconds:600}]];
+ // Mean long skiing is 5 minutes, not the longest route (10) or traverse time.
+ assert.equal(s.chooseLift(a,true),'short');
+
+});

@@ -1,4 +1,4 @@
-import {minimumChoice, preferredLifts} from '../reference/rules.mjs';
+import {maximumRatioChoice, preferredLifts} from '../reference/rules.mjs';
 
 export function seededRandom(seed) {
   let x = Number(seed) >>> 0;
@@ -201,9 +201,11 @@ export class Simulation {
     if(a.class==='mixed'&&!a.preferred&&this.t-a.born>=a.plannedStay*this.config.population.mixed_exploration_fraction_of_planned_stay){const ids=preferredLifts(a.waits,this.config.population.mixed_preferred_lift_count,this.random);if(ids.length)a.preferred=ids;}
     const candidates=this.mountain.candidates(a).map(id=>{
       const path=this.mountain.transfer(a.node,this.mountain.lifts[id].base,a);
-      return {id,cost:path===null?Infinity:path.reduce((s,e)=>s+e.seconds,0)/60+a.memory[id]/(this.mountain.lifts[id].capacity_skiers_per_hour/60)+this.mountain.lifts[id].ride_minutes};
-    }).filter(x=>Number.isFinite(x.cost));
-    return minimumChoice(candidates,this.random,this.config.decision.tie_epsilon_minutes);
+      const routes=this.legalRoutes(id,a);
+      const skiMinutes=routes.length?routes.reduce((total,route)=>total+route.reduce((s,e)=>s+(e.state==='SKI_RUN'?e.seconds:0),0),0)/routes.length/60:NaN;
+      return {id,skiMinutes,overheadMinutes:path===null?Infinity:path.reduce((s,e)=>s+e.seconds,0)/60+a.memory[id]/(this.mountain.lifts[id].capacity_skiers_per_hour/60)+this.mountain.lifts[id].ride_minutes};
+    });
+    return maximumRatioChoice(candidates,this.random,this.config.decision.tie_epsilon_ratio??1e-9);
   }
   commit(a,id,opening=false){
     a.destination=id;
@@ -235,8 +237,7 @@ export class Simulation {
     const next=this.t+3600*(this.mountain.lifts[id].seats_per_chair??1)/this.mountain.lifts[id].capacity_skiers_per_hour;
     if(next<this.closeTime)this.events.push(next,3,'board',id);
   }
-  descent(a){
-    const id=a.lastLift;a.node=this.mountain.lifts[id].top;
+  legalRoutes(id,a){
     let routes=this.mountain.itineraries(id,a);
     if(this.mountain.generated){
       if(a.subtype==='park')routes=routes.filter(p=>p.some(e=>e.difficulty==='park'));
@@ -247,6 +248,11 @@ export class Simulation {
       if(a.subtype==='race')routes=routes.filter(p=>p[0].parent==='T01'&&p.some(e=>e.parent==='B10'));
       if(a.subtype==='other')routes=routes.filter(p=>p.every(e=>e.parent===a.run));
     }
+    return routes;
+  }
+  descent(a){
+    const id=a.lastLift;a.node=this.mountain.lifts[id].top;
+    const routes=this.legalRoutes(id,a);
     if(!routes.length)throw new Error(`No legal itinerary for ${a.id}/${id}/${a.run}`);
     this.beginRoute(a,routes[Math.floor(this.random()*routes.length)],'descent');
   }

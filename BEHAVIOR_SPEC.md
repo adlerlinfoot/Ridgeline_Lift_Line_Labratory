@@ -7,17 +7,18 @@ Each individual has a unique `id`, main `class`, current state/position, a perso
 **General objective:** maximize actual time spent downhill skiing during an individual finite day. The operative heuristic is intentionally simpler and is not claimed to be a globally optimal solution:
 
 ```
-next_lift = argmin over physically reachable, open, class-admissible lifts j:
-      network_travel_minutes(current_base, base_of(j))
-      + remembered_wait_minutes(agent,j)
-      + lift_ride_minutes(j)
+next_lift = argmax over physically reachable, open, class-admissible lifts j:
+      expected_legal_downhill_ski_minutes(agent,j)
+      / (network_travel_minutes(current_base, base_of(j))
+         + remembered_wait_minutes(agent,j)
+         + lift_ride_minutes(j))
 ```
 
 If already at lift `j`, base-to-base travel is zero. `remembered_wait_minutes` is initialized by observing `Q_j/mu_j` for all *operating* lifts on spawn, and is refreshed for the lift at the agent's *actual present base* when encountered. If storing queue sizes instead, use `remembered_Q_j / mu_j` on the fly. Do not expose or refresh actual remote queue values by polling the global state during decision. `mu_j` means maximum capacity, whereas `S_j(t)` means realized boarding rate.
 
-For mathematical exposition, `j*(t)=argmin_{j∈A_i(t)}(T_travel,c→j + k_j + T_ride,j)` where `i` identifies skier and `c` current lift/base. Crucially `k_j` in the *individual* choice is a **last-observed estimate**, not the live hidden remote state.
+For mathematical exposition, `j*(t)=argmax_{j in A_i(t)} E[T_ski,i,j] / (T_travel,c->j + k_i,j + T_ride,j)`. The numerator is the arithmetic mean of SKI_RUN minutes across complete legal itineraries after applying that agent's specialty constraints. This matches uniform itinerary sampling at the summit and consumes no extra random draw. SKI_TRAVERSE and walking remain transit and are excluded from the numerator. The denominator must be positive and finite. Queue estimates remain last-observed, not live remote values. This is a one-lap heuristic, not a full-day optimum or a forecast of future queues.
 
-If costs tie numerically within a small epsilon, choose with the simulation's seeded PRNG. Never use random choice to override a strict cost winner. A physical route must exist; otherwise exclude the lift. A destination is committed and not reevaluated halfway across the valley, waiting queue, chair or descent. Choose again only after finishing the chosen downhill itinerary at a base.
+If ratios tie numerically within the configured dimensionless epsilon, choose with the simulation's seeded PRNG. Never use random choice to override a strict ratio winner. A physical route must exist; otherwise exclude the lift. A destination is committed and not reevaluated halfway across the valley, waiting queue, chair or descent. Choose again only after finishing the chosen downhill itinerary at a base.
 
 ## B. Main classes (conditional populations)
 
@@ -73,7 +74,7 @@ On spawn: create `last_seen_queue_count[j]` and `last_observed_at[j]` for all *a
 
 Each agent carries `seen_at` timestamps strictly for diagnostics; **do not decay memory to a mean or replace it with true queue information**. Potentially stale beliefs are the mechanism of interest.
 
-Stochastic events include class/subtype assignment, Poisson spawning, finite personal stay, tie breaks and compatible run-choice sampling. Use one explicitly seeded RNG for every randomized action. There is no arbitrarily introduced random "mistake" in choosing a nonminimum-cost lift.
+Stochastic events include class/subtype assignment, Poisson spawning, finite personal stay, tie breaks and compatible run-choice sampling. Use one explicitly seeded RNG for every randomized action. There is no arbitrarily introduced random "mistake" in choosing a nonmaximum-ratio lift.
 
 ## E. Time-accounting categories
 
