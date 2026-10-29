@@ -1,3 +1,4 @@
+import {displayName} from './display-labels.mjs';
 // Schematic 3D route skeleton. Node heights are supplied; intermediate heights are
 // interpolated by planar arc length. This is a view, never a second simulation.
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -232,7 +233,7 @@ export class Mountain3D {
       for(const chunk of visiblePolyline(r.points,this.camera)){
         const screen=chunk.map(project);
         trace(screen,active?r.color:'#364952',this.hover?.id===r.id?3.5:r.kind==='lift'?2.5:1.5,r.kind==='transfer'?[4,4]:[]);
-        this.routeHits.push({type:'route',id:r.id,points:screen,text:`${r.id} · ${r.name} · ${Math.round(r.length)} m${active?'':' · closed'}`});
+        this.routeHits.push({type:'route',id:r.id,points:screen,text:`${displayName(r)?displayName(r)+' · ':''}${r.kind} · ${Math.round(r.length)} m${active?'':' · closed'}`});
       }
     }
     this.hits=[];
@@ -245,8 +246,9 @@ export class Mountain3D {
       if(lift&&activeLifts.has(lift.id)){
         c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fillStyle='#0a1822ee';c.fill();c.strokeStyle=color;c.lineWidth=1.5;c.stroke();c.fillStyle='#f1f6f3';c.font='600 11px system-ui';c.fillText(sim.queueSize(lift.id),p.x,p.y);c.font='10px system-ui';
       }else if(n.kind==='base_lodge'){c.fillStyle='#e7d7ad';c.fillRect(p.x-6,p.y-3,12,10);c.beginPath();c.moveTo(p.x-9,p.y-3);c.lineTo(p.x,p.y-11);c.lineTo(p.x+9,p.y-3);c.closePath();c.fill();}else{c.beginPath();c.arc(p.x,p.y,3.5,0,Math.PI*2);c.fillStyle=color;c.fill();}
-      if(this.labels){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:this.map.behavior?.generated?(n.name??nodeLabel(n.id)):nodeLabel(n.id),labelY=p.y+(n.kind==='base_lodge'?-24:24);c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,labelY-7,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,labelY);}
-      this.hits.push({...p,type:'node',id:n.id,text:`${lift?lift.id+' · ':''}${this.map.behavior?.generated?(n.name??nodeLabel(n.id)):nodeLabel(n.id)} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
+      const nodeText=this.map.behavior?.generated?displayName(n):nodeLabel(n.id);
+      if(this.labels&&(lift?displayName(lift):nodeText)){const text=lift?`${lift.id} · ${activeLifts.has(lift.id)?'base':'closed'}`:nodeText,labelY=p.y+(n.kind==='base_lodge'?-24:24);c.fillStyle='#081720dd';c.fillRect(p.x-c.measureText(text).width/2-3,labelY-7,c.measureText(text).width+6,14);c.fillStyle=color;c.fillText(text,p.x,labelY);}
+      this.hits.push({...p,type:'node',id:n.id,text:`${lift&&displayName(lift)?displayName(lift)+' · ':''}${nodeText||n.kind} · ${n.elevation_m.toFixed(1)} m${lift?' · queue '+sim.queueSize(lift.id):''}`});
     }
     c.textAlign='left';c.fillStyle='#7898a5';c.font='10px system-ui';c.fillText(this.camera.cone?'SCHEMATIC CONE WRAP · SHARED SIMULATION':'NODE ELEVATIONS + INTERPOLATED ROUTE HEIGHTS',12,height-15);
     if(this.hover&&!this.hits.some(h=>h.type===this.hover.type&&h.id===this.hover.id)&&!this.routeHits.some(h=>h.type===this.hover.type&&h.id===this.hover.id))this.hover=null;

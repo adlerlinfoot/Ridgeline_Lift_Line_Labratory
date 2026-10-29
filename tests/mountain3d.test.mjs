@@ -117,3 +117,13 @@ test('horizon clipping emits only visible route segments and is disabled in unwr
   }
   assert.deepEqual(visiblePolyline(ring,{...camera,cone:false},true),[ring]);
 });
+
+test('generated 3D map hides placeholder labels while retaining nodes and routes',()=>{
+ const m=structuredClone(map);m.behavior={generated:true};m.nodes.forEach(n=>n.name='New node');m.runs.forEach(r=>r.name='New route');m.lifts.forEach(l=>l.name='New lift');
+ const oldWindow=globalThis.window;globalThis.window={devicePixelRatio:1};
+ const canvas=fakeCanvas(),view=new Mountain3D(canvas,m);view.camera.cone=false;
+ const sim=new Simulation(map,config,{initialAgents:0});view.draw(sim);
+ assert.ok(view.hits.length>0);assert.ok(view.routeHits.length>0);
+ assert.ok(!canvas.calls.filter(c=>c[0]==='fillText').some(c=>/New node|New route|New lift/.test(c[1])));
+ assert.ok(!view.hits.some(h=>/New node|New lift/.test(h.text)));assert.ok(!view.routeHits.some(h=>/New route/.test(h.text)));globalThis.window=oldWindow;
+});
